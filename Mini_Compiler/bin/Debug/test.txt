@@ -1,5 +1,0 @@
-program
-{
-   int chuj, penis, dupaaa;
-   double dupa,chuj;
-}
