@@ -1,0 +1,9 @@
+C:\Users\Artur\source\repos\Mini_Compiler\Mini_Compiler\obj\Debug\Mini_Compiler.csproj.CoreCompileInputs.cache
+C:\Users\Artur\source\repos\Mini_Compiler\Mini_Compiler\bin\Debug\test.txt
+C:\Users\Artur\source\repos\Mini_Compiler\Mini_Compiler\bin\Debug\Mini_Compiler.exe.config
+C:\Users\Artur\source\repos\Mini_Compiler\Mini_Compiler\bin\Debug\Mini_Compiler.exe
+C:\Users\Artur\source\repos\Mini_Compiler\Mini_Compiler\bin\Debug\Mini_Compiler.pdb
+C:\Users\Artur\source\repos\Mini_Compiler\Mini_Compiler\bin\Debug\QUT.ShiftReduceParser.dll
+C:\Users\Artur\source\repos\Mini_Compiler\Mini_Compiler\obj\Debug\Mini_Compiler.csproj.CopyComplete
+C:\Users\Artur\source\repos\Mini_Compiler\Mini_Compiler\obj\Debug\Mini_Compiler.exe
+C:\Users\Artur\source\repos\Mini_Compiler\Mini_Compiler\obj\Debug\Mini_Compiler.pdb
