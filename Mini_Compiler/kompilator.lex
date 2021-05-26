@@ -4,7 +4,7 @@
 IntNum      ([1-9][0-9]*|0)
 Identifier      ([a-zA-Z][a-zA-Z0-9]*)
 IntNumber             (0|[1-9][0-9]*)
-RealNumber          (0|[1-9][0-9]*)\.[0-9]+
+DoubleNumber          (0|[1-9][0-9]*)\.[0-9]+
 Comment       (\/\/.*)
 String        \"([^"\n])*\"
 
@@ -29,7 +29,9 @@ String        \"([^"\n])*\"
 "write"		{ return (int)Tokens.Write; }
 "return"	{ return (int)Tokens.Return; }
 "int" 		{ return (int)Tokens.IntType; }
-"double"	{ return (int)Tokens.RealType; }
+"double"	{ return (int)Tokens.DoubleType; }
+"(int)" 	{ return (int)Tokens.IntParse; }
+"(double)"	{ return (int)Tokens.DoubleParse; }
 "bool" 		{ return (int)Tokens.BoolType; }
 "true" 		{ return (int)Tokens.True; }
 "false"		{ return (int)Tokens.False; }
@@ -38,7 +40,7 @@ String        \"([^"\n])*\"
 "="			{ return (int)Tokens.Assign; }
 "||"		{ return (int)Tokens.Or; }
 "&&"		{ return (int)Tokens.And; }
-"|"			{ return (int)Tokens.BitOR; }
+"|"			{ return (int)Tokens.BitOr; }
 "&"			{ return (int)Tokens.BitAnd; }
 "=="		{ return (int)Tokens.Equality; }
 "!="		{ return (int)Tokens.Unequality; }
@@ -66,7 +68,7 @@ String        \"([^"\n])*\"
 
 {Identifier}	{ yylval.str=yytext; return (int)Tokens.Identifier; }
 {IntNumber}		{ yylval.str=yytext; return (int)Tokens.IntNumber; }     
-{RealNumber}	{ yylval.str=yytext; return (int)Tokens.RealNumber; }     
+{DoubleNumber}	{ yylval.str=yytext; return (int)Tokens.DoubleNumber; }     
 {String}		{ yylval.str=yytext; return (int)Tokens.String; }         
 {Comment}		{ }    
 <<EOF>>			{ return (int)Tokens.EOF; } 

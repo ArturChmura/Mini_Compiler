@@ -6,9 +6,9 @@
 //
 //  GPLEX Version:  1.2.2
 //  Machine:  DESKTOP-UEML2C3
-//  DateTime: 25.05.2021 00:04:55
+//  DateTime: 26.05.2021 01:42:09
 //  UserName: Artur
-//  GPLEX input file <.\kompilator.lex - 25.05.2021 00:04:32>
+//  GPLEX input file <.\kompilator.lex - 25.05.2021 22:28:18>
 //  GPLEX frame file <embedded resource>
 //
 //  Option settings: parser, minimize
@@ -125,8 +125,8 @@ namespace Mini_Compiler
         
         enum Result {accept, noMatch, contextFound};
 
-        const int maxAccept = 89;
-        const int initial = 90;
+        const int maxAccept = 91;
+        const int initial = 92;
         const int eofNum = 0;
         const int goStart = -1;
         const int INITIAL = 0;
@@ -171,29 +171,29 @@ public int LineNumber { get; private set; } = 1;
         }
     };
 
-    static int[] startState = new int[] {90, 0};
+    static int[] startState = new int[] {92, 0};
 
-    static Table[] NxS = new Table[93] {
+    static Table[] NxS = new Table[104] {
 /* NxS[   0] */ new Table(0, 0, 0, null),
 /* NxS[   1] */ new Table(0, 0, -1, null),
 /* NxS[   2] */ new Table(0, 0, -1, null),
 /* NxS[   3] */ new Table(0, 0, -1, null),
 /* NxS[   4] */ new Table(0, 0, -1, null),
 /* NxS[   5] */ new Table(0, 0, -1, null),
-/* NxS[   6] */ new Table(61, 1, -1, new sbyte[] {89}),
-/* NxS[   7] */ new Table(10, 25, 92, new sbyte[] {-1, 92, 92, 92, 92, 92, 
-          92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 
-          92, 92, 88}),
-/* NxS[   8] */ new Table(38, 1, -1, new sbyte[] {87}),
-/* NxS[   9] */ new Table(0, 0, -1, null),
+/* NxS[   6] */ new Table(61, 1, -1, new sbyte[] {91}),
+/* NxS[   7] */ new Table(10, 25, 103, new sbyte[] {-1, 103, 103, 103, 103, 103, 
+          103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 
+          103, 103, 90}),
+/* NxS[   8] */ new Table(38, 1, -1, new sbyte[] {89}),
+/* NxS[   9] */ new Table(100, 6, -1, new sbyte[] {94, -1, -1, -1, -1, 95}),
 /* NxS[  10] */ new Table(0, 0, -1, null),
 /* NxS[  11] */ new Table(0, 0, -1, null),
 /* NxS[  12] */ new Table(0, 0, -1, null),
 /* NxS[  13] */ new Table(0, 0, -1, null),
 /* NxS[  14] */ new Table(0, 0, -1, null),
 /* NxS[  15] */ new Table(47, 1, -1, new sbyte[] {86}),
-/* NxS[  16] */ new Table(46, 1, -1, new sbyte[] {91}),
-/* NxS[  17] */ new Table(46, 12, -1, new sbyte[] {91, -1, 17, 17, 17, 17, 
+/* NxS[  16] */ new Table(46, 1, -1, new sbyte[] {93}),
+/* NxS[  17] */ new Table(46, 12, -1, new sbyte[] {93, -1, 17, 17, 17, 17, 
           17, 17, 17, 17, 17, 17}),
 /* NxS[  18] */ new Table(0, 0, -1, null),
 /* NxS[  19] */ new Table(61, 1, -1, new sbyte[] {84}),
@@ -543,7 +543,9 @@ public int LineNumber { get; private set; } = 1;
 /* NxS[  87] */ new Table(0, 0, -1, null),
 /* NxS[  88] */ new Table(0, 0, -1, null),
 /* NxS[  89] */ new Table(0, 0, -1, null),
-/* NxS[  90] */ new Table(9, 118, 1, new sbyte[] {2, 3, 1, 1, 4, 1, 
+/* NxS[  90] */ new Table(0, 0, -1, null),
+/* NxS[  91] */ new Table(0, 0, -1, null),
+/* NxS[  92] */ new Table(9, 118, 1, new sbyte[] {2, 3, 1, 1, 4, 1, 
           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
           1, 5, 6, 7, 1, 1, 1, 8, 1, 9, 10, 11, 12, 13, 14, 1, 
           15, 16, 17, 17, 17, 17, 17, 17, 17, 17, 17, 1, 18, 19, 20, 21, 
@@ -551,11 +553,20 @@ public int LineNumber { get; private set; } = 1;
           22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 1, 1, 1, 1, 
           1, 1, 22, 23, 22, 24, 25, 26, 22, 27, 28, 22, 22, 22, 22, 22, 
           22, 29, 22, 30, 22, 31, 22, 22, 32, 22, 22, 22, 33, 34, 35, 36}),
-/* NxS[  91] */ new Table(48, 10, -1, new sbyte[] {85, 85, 85, 85, 85, 85, 
+/* NxS[  93] */ new Table(48, 10, -1, new sbyte[] {85, 85, 85, 85, 85, 85, 
           85, 85, 85, 85}),
-/* NxS[  92] */ new Table(10, 25, 92, new sbyte[] {-1, 92, 92, 92, 92, 92, 
-          92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 
-          92, 92, 88}),
+/* NxS[  94] */ new Table(111, 1, -1, new sbyte[] {98}),
+/* NxS[  95] */ new Table(110, 1, -1, new sbyte[] {96}),
+/* NxS[  96] */ new Table(116, 1, -1, new sbyte[] {97}),
+/* NxS[  97] */ new Table(41, 1, -1, new sbyte[] {87}),
+/* NxS[  98] */ new Table(117, 1, -1, new sbyte[] {99}),
+/* NxS[  99] */ new Table(98, 1, -1, new sbyte[] {100}),
+/* NxS[ 100] */ new Table(108, 1, -1, new sbyte[] {101}),
+/* NxS[ 101] */ new Table(101, 1, -1, new sbyte[] {102}),
+/* NxS[ 102] */ new Table(41, 1, -1, new sbyte[] {88}),
+/* NxS[ 103] */ new Table(10, 25, 103, new sbyte[] {-1, 103, 103, 103, 103, 103, 
+          103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 103, 
+          103, 103, 90}),
     };
 
 int NextState() {
@@ -981,7 +992,7 @@ int NextState() {
     {
         case eofNum:
             switch (currentStart) {
-                case 90:
+                case 92:
 return (int)Tokens.EOF;
                     break;
             }
@@ -1095,7 +1106,7 @@ yylval.str=yytext; return (int)Tokens.Identifier;
 return (int)Tokens.OpenBracket;
             break;
         case 34:
-return (int)Tokens.BitOR;
+return (int)Tokens.BitOr;
             break;
         case 35:
 return (int)Tokens.CloseBracket;
@@ -1140,7 +1151,7 @@ return (int)Tokens.False;
 return (int)Tokens.Else;
             break;
         case 78:
-return (int)Tokens.RealType;
+return (int)Tokens.DoubleType;
             break;
         case 81:
 return (int)Tokens.BoolType;
@@ -1155,18 +1166,24 @@ return (int)Tokens.Equality;
 return (int)Tokens.LessOrEqual;
             break;
         case 85:
-yylval.str=yytext; return (int)Tokens.RealNumber;
+yylval.str=yytext; return (int)Tokens.DoubleNumber;
             break;
         case 86:
 { }
             break;
         case 87:
-return (int)Tokens.And;
+return (int)Tokens.IntParse;
             break;
         case 88:
-yylval.str=yytext; return (int)Tokens.String;
+return (int)Tokens.DoubleParse;
             break;
         case 89:
+return (int)Tokens.And;
+            break;
+        case 90:
+yylval.str=yytext; return (int)Tokens.String;
+            break;
+        case 91:
 return (int)Tokens.Unequality;
             break;
         default:
