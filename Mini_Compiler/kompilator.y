@@ -1,7 +1,5 @@
 ﻿%namespace Mini_Compiler
-
 %output=Parser.cs
-
 
 %{
     private ParserCS parser;
@@ -39,14 +37,14 @@
 %token  OpenParenthesis CloseParenthesis OpenBracket CloseBracket Comma Semicolon
 %token  Error DoubleNumber IntNumber IntParse DoubleParse
 
-%token <str> Identifier IntNumber DoubleNumber True False
+%token <str> Identifier IntNumber DoubleNumber True False String
 
 %type <declarations> declarations
 %type <declaration> declaration 
 %type <strings> identifiers identifiersComma
 %type <type> type 
 %type <instructions> instructions
-%type <instruction> instruction block expressionInstruction
+%type <instruction> instruction blockInstruction expressionInstruction ifInstruction whileInstruction readInstruction writeInstruction returnInstruction
 %type <expression> expression constantExpression unaryExpression binaryExpression
 %type <identifier> identifier 
 
@@ -58,12 +56,15 @@
 %left BitOr BitAnd
 %right Tilde Exclamation IntParse DoubleParse Minus
 
+%nonassoc CloseParenthesis
+%nonassoc Else
+
 %%
 
-start           : Program block { RootNode  = $2; }
+start           : Program blockInstruction { RootNode  = $2; }
                 ;
 
-block           : OpenBracket declarations instructions CloseBracket   { $$  = new BlockInstructionNode($2, $3); }
+blockInstruction: OpenBracket declarations instructions CloseBracket   { $$  = new blockInstructionInstructionNode($2, $3); }
                 ;
 
 declarations    : declarations declaration { $$ = $1; $$.Add($2); }
@@ -77,27 +78,35 @@ declaration     : type identifiers Semicolon
                 }
                 ;
 
+type            : IntType { $$ = new IntType(); }
+                | DoubleType { $$ = new DoubleType(); }
+                | BoolType { $$ = new BoolType(); }
+                ;
+
 identifiers     : identifiersComma Identifier { $$ = $1; $$.Add($2); }
                 ;
 
 identifiersComma: identifiersComma Identifier Comma  { $$ = $1; $$.Add($2); }
                 | { $$ = new List<string>(); }
                 ;
-
-type            : IntType { $$ = new IntType(); }
-                | DoubleType { $$ = new DoubleType(); }
-                | BoolType { $$ = new BoolType(); }
+                
+identifier      : Identifier { $$ = parser.GetIdentifier($1); }
                 ;
 
 instructions    : instructions instruction { $$ = $1; $$.Add($2); }
                 | { $$ = new List<InstructionNode>(); }
                 ;
 
-instruction     : block { $$ = $1; }
+instruction     : blockInstruction { $$ = $1; }
                 | expressionInstruction { $$ = $1; }
+                | ifInstruction { $$ = $1; }
+                | whileInstruction { $$ = $1; }
+                | readInstruction { $$ = $1; }
+                | writeInstruction { $$ = $1; }
+                | returnInstruction { $$ = $1; }
                 ;
 
-expressionInstruction      : expression Semicolon { $$ = new ExpressionInstructionNode($1); }
+expressionInstruction   : expression Semicolon { $$ = new ExpressionInstructionNode($1); }
                 ;
 
 expression      : unaryExpression { $$ = $1; }
@@ -114,7 +123,7 @@ unaryExpression : Minus expression { $$ = new UnaryMinusExpression($2);  }
                 | DoubleParse expression { $$ = new DoubleConversionExpression($2);  }
                 ;
 
-binaryExpression  : expression BitOr expression { $$ = new BitsOrExpression($1,$3);  }
+binaryExpression: expression BitOr expression { $$ = new BitsOrExpression($1,$3);  }
                 | expression BitAnd expression { $$ = new BitAndExpression($1,$3);  }
 
                 | expression Multiplies expression { $$ = new Multiplication($1,$3);  }
@@ -142,5 +151,21 @@ constantExpression  : IntNumber { $$ = new IntConstantExpression($1); }
                 | False { $$ = new BoolConstantExpression(false); }
                 ;
 
-identifier : Identifier { $$ = parser.GetIdentifier($1); }
-            ;
+ifInstruction   : If OpenParenthesis expression CloseParenthesis instruction { $$ = new IfInstruction($3,$5); }
+                | If OpenParenthesis expression CloseParenthesis instruction Else instruction { $$ = new IfInstruction($3,$5,$7); }
+                ;
+
+whileInstruction: While OpenParenthesis expression CloseParenthesis instruction { $$ = new WhileInstruction($3,$5); }
+                ;
+
+readInstruction : Read identifier Semicolon { $$ = new ReadInstruction($2); }
+                | Read identifier Comma Hex Semicolon { $$ = new ReadHexInstruction($2); }
+                ;
+                
+writeInstruction: Write identifier Semicolon { $$ = new WriteInstruction($2); }
+                | Write identifier Comma Hex Semicolon { $$ = new WriteHexInstruction($2); }
+                | Write String Semicolon { $$ = new WriteStringInstruction($2); }
+                ;
+
+returnInstruction   : Return Semicolon { $$ = new ReturnInstruction(); }
+                ;

@@ -66,15 +66,70 @@ namespace Mini_Compiler
     #endregion
 
 
+    #region Type
+    public interface IType
+    {
+        string TypeName { get; }
+        bool CanAssign(IType type);
+        bool CanConvertToInt();
+        bool CanConvertToDouble();
+        bool CanConvertToBool();
+        bool Accept(ITypeVisitor visitor);
+    }
+
+    public class IntType : IType
+    {
+        public string TypeName => "int";
+
+        public bool Accept(ITypeVisitor visitor)
+        {
+            return visitor.Can(this);
+        }
+
+        public bool CanAssign(IType type) => type.CanConvertToInt();
+
+        public bool CanConvertToBool() => false;
+
+        public bool CanConvertToDouble() => true;
+
+        public bool CanConvertToInt() => true;
+    }
+    public class DoubleType : IType
+    {
+        public string TypeName => "double";
+        public bool Accept(ITypeVisitor visitor)
+        {
+            return visitor.Can(this);
+        }
+        public bool CanAssign(IType type) => type.CanConvertToDouble();
+        public bool CanConvertToBool() => false;
+
+        public bool CanConvertToDouble() => true;
+
+        public bool CanConvertToInt() => false;
+    }
+    public class BoolType : IType
+    {
+        public string TypeName => "bool";
+        public bool Accept(ITypeVisitor visitor)
+        {
+            return visitor.Can(this);
+        }
+        public bool CanAssign(IType type) => type.CanConvertToBool();
+        public bool CanConvertToBool() => true;
+
+        public bool CanConvertToDouble() => false;
+
+        public bool CanConvertToInt() => false;
+    }
+    #endregion Type
+
+
     #region Nodes
     public interface INode
     {
         string GenCode();
     }
-
-
-
-
 
     public class DeclarationNode : INode
     {
@@ -173,7 +228,7 @@ namespace Mini_Compiler
 
 
     #region Expressions
-    public interface IExpression: INode
+    public interface IExpression : INode
     {
         IType Type { get; }
     }
@@ -193,7 +248,7 @@ namespace Mini_Compiler
         }
 
         public int Value { get; }
-        public override IType Type { get=> new IntType(); }
+        public override IType Type { get => new IntType(); }
 
         public override string GenCode()
         {
@@ -235,7 +290,7 @@ namespace Mini_Compiler
     #endregion ConstantExpressions
 
 
-    public interface IExpressionVisitor
+    public interface ITypeVisitor
     {
         bool Can(IntType type);
         bool Can(DoubleType type);
@@ -243,13 +298,13 @@ namespace Mini_Compiler
     }
 
     #region UnaryExpressions
-   
-    public abstract class UnaryExpression : IExpression, IExpressionVisitor
+
+    public abstract class UnaryExpression : IExpression, ITypeVisitor
     {
         public UnaryExpression(IExpression expression)
         {
             Expression = expression;
-            if(expression.Type.Accept(this) == false)
+            if (expression.Type.Accept(this) == false)
             {
                 ParserCS.ReportError("Wrong type on unary expression");
             }
@@ -267,7 +322,7 @@ namespace Mini_Compiler
         public abstract string GenCode();
     }
 
-    public class UnaryMinusExpression : UnaryExpression, IExpressionVisitor
+    public class UnaryMinusExpression : UnaryExpression, ITypeVisitor
     {
         public UnaryMinusExpression(IExpression expression) : base(expression) { }
         public override bool Can(IntType type) => true;
@@ -283,7 +338,7 @@ namespace Mini_Compiler
         }
     }
 
-    public class BitNegationExpression : UnaryExpression, IExpressionVisitor
+    public class BitNegationExpression : UnaryExpression, ITypeVisitor
     {
         public BitNegationExpression(IExpression expression) : base(expression) { }
         public override bool Can(IntType type) => true;
@@ -299,7 +354,7 @@ namespace Mini_Compiler
         }
     }
 
-    public class LogicNegationExpression : UnaryExpression, IExpressionVisitor
+    public class LogicNegationExpression : UnaryExpression, ITypeVisitor
     {
         public LogicNegationExpression(IExpression expression) : base(expression) { }
         public override bool Can(IntType type) => false;
@@ -315,7 +370,7 @@ namespace Mini_Compiler
         }
     }
 
-    public class IntConversionExpression : UnaryExpression, IExpressionVisitor
+    public class IntConversionExpression : UnaryExpression, ITypeVisitor
     {
         public IntConversionExpression(IExpression expression) : base(expression) { }
         public override bool Can(IntType type) => true;
@@ -331,7 +386,7 @@ namespace Mini_Compiler
         }
     }
 
-    public class DoubleConversionExpression : UnaryExpression, IExpressionVisitor
+    public class DoubleConversionExpression : UnaryExpression, ITypeVisitor
     {
         public DoubleConversionExpression(IExpression expression) : base(expression) { }
         public override bool Can(IntType type) => true;
@@ -349,7 +404,7 @@ namespace Mini_Compiler
     #endregion UnaryExpressions
 
     #region BitsExpressions
-    public abstract class BitsExpression:IExpression,IExpressionVisitor
+    public abstract class BitsExpression : IExpression, ITypeVisitor
     {
         public BitsExpression(IExpression leftExpression, IExpression rightExpression)
         {
@@ -377,7 +432,7 @@ namespace Mini_Compiler
 
     public class BitsOrExpression : BitsExpression
     {
-        public BitsOrExpression(IExpression leftExpression, IExpression rightExpression):base(leftExpression,rightExpression) { }
+        public BitsOrExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
 
         public override string GenCode()
         {
@@ -404,7 +459,7 @@ namespace Mini_Compiler
     #endregion BitsExpressions
 
     #region AdditivesMultiplicativeExpressions
-    public abstract class AdditivesMultiplicativeExpressions : IExpression, IExpressionVisitor
+    public abstract class AdditivesMultiplicativeExpressions : IExpression, ITypeVisitor
     {
         public AdditivesMultiplicativeExpressions(IExpression leftExpression, IExpression rightExpression)
         {
@@ -492,7 +547,7 @@ namespace Mini_Compiler
     #endregion AdditivesMultiplicativeExpressions
 
     #region RelationsExpressions
-    public abstract class RelationsExpression : IExpression, IExpressionVisitor
+    public abstract class RelationsExpression : IExpression, ITypeVisitor
     {
         public RelationsExpression(IExpression leftExpression, IExpression rightExpression)
         {
@@ -515,7 +570,7 @@ namespace Mini_Compiler
     }
     public abstract class AllTypeRelationExpression : RelationsExpression
     {
-        public AllTypeRelationExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) 
+        public AllTypeRelationExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression)
         {
             if (leftExpression.Type.Accept(this) == false || rightExpression.Type.Accept(this) == false)
             {
@@ -644,7 +699,7 @@ namespace Mini_Compiler
     #endregion RelationsExpressions
 
     #region LogicsExpressions
-    public abstract class LogicsExpression : IExpression, IExpressionVisitor
+    public abstract class LogicsExpression : IExpression, ITypeVisitor
     {
         public LogicsExpression(IExpression leftExpression, IExpression rightExpression)
         {
@@ -695,6 +750,7 @@ namespace Mini_Compiler
     }
     #endregion LogicsExpressions
 
+
     public class AssignExpression : IExpression
     {
         public AssignExpression(Identifier identifier, IExpression expression)
@@ -724,63 +780,244 @@ namespace Mini_Compiler
     #endregion Expressions
 
 
-    #region Type
-    public interface IType
-    {
-        string TypeName { get; }
-        bool CanAssign(IType type);
-        bool CanConvertToInt();
-        bool CanConvertToDouble();
-        bool CanConvertToBool();
-        bool Accept(IExpressionVisitor visitor);
-    }
+    #region IF
 
-    public class IntType : IType
+    public class IfInstruction : InstructionNode, ITypeVisitor
     {
-        public string TypeName => "int";
-
-        public bool Accept(IExpressionVisitor visitor)
+        public IfInstruction(IExpression condition, InstructionNode instruction, InstructionNode elseInstruction = null)
         {
-            return visitor.Can(this);
+            Condition = condition;
+            Instruction = instruction;
+            ElseInstruction = elseInstruction;
+            if (!condition.Type.Accept(this))
+            {
+                ParserCS.ReportError("If condition is not a bool type");
+            }
         }
 
-        public bool CanAssign(IType type) => type.CanConvertToInt();
+        public IExpression Condition { get; }
+        public InstructionNode Instruction { get; }
+        public InstructionNode ElseInstruction { get; }
 
-        public bool CanConvertToBool() => false;
+        public bool Can(IntType type) => false;
 
-        public bool CanConvertToDouble() => true;
+        public bool Can(DoubleType type) => false;
 
-        public bool CanConvertToInt() => true;
-    }
-    public class DoubleType : IType
-    {
-        public string TypeName => "double";
-        public bool Accept(IExpressionVisitor visitor)
+        public bool Can(BoolType type) => true;
+
+        public override string GenCode()
         {
-            return visitor.Can(this);
+            var condRegister = Condition.GenCode();
+            if (ElseInstruction == null)
+            {
+                Console.WriteLine($"If({condRegister}) jak nie to skok na koniec");
+            }
+            else
+            {
+                Console.WriteLine($"If({condRegister}) jak nie to skok do elsa");
+            }
+            Instruction.GenCode();
+            if (ElseInstruction == null)
+            {
+                Console.WriteLine("Etykieta końcowa ");
+            }
+            else
+            {
+                Console.WriteLine("Etykieta do elsa ");
+                ElseInstruction.GenCode();
+            }
+
+            return null;
         }
-        public bool CanAssign(IType type) => type.CanConvertToDouble();
-        public bool CanConvertToBool() => false;
-
-        public bool CanConvertToDouble() => true;
-
-        public bool CanConvertToInt() => false;
     }
-    public class BoolType : IType
+
+
+
+    #endregion IF
+
+
+    #region While
+    public class WhileInstruction : InstructionNode, ITypeVisitor
     {
-        public string TypeName => "bool";
-        public bool Accept(IExpressionVisitor visitor)
+        public WhileInstruction(IExpression condition, InstructionNode instruction)
         {
-            return visitor.Can(this);
+            Condition = condition;
+            Instruction = instruction;
+            if (!condition.Type.Accept(this))
+            {
+                ParserCS.ReportError("While condition is not a bool type");
+            }
         }
-        public bool CanAssign(IType type) => type.CanConvertToBool();
-        public bool CanConvertToBool() => true;
 
-        public bool CanConvertToDouble() => false;
+        public IExpression Condition { get; }
+        public InstructionNode Instruction { get; }
 
-        public bool CanConvertToInt() => false;
+        public bool Can(IntType type) => false;
+
+        public bool Can(DoubleType type) => false;
+
+        public bool Can(BoolType type) => true;
+
+        public override string GenCode()
+        {
+            Console.WriteLine("Etykieta start");
+            var condRegister = Condition.GenCode();
+            Console.WriteLine($"If({condRegister} == flase) skok do etykiety końcowej");
+            Instruction.GenCode();
+            Console.WriteLine("Skok do etykiety początkowej ");
+            Console.WriteLine("Etykieta końcowa ");
+
+
+            return null;
+        }
     }
-    #endregion Type
+
+
+    #endregion While
+
+
+    #region Read
+
+    public class ReadInstruction : InstructionNode,ITypeVisitor
+    {
+        public ReadInstruction(Identifier identifier)
+        {
+            Identifier = identifier;
+            if(!identifier.Type.Accept(this))
+            {
+                ParserCS.ReportError("Read instruction expects int or bool identifier");
+            }
+        }
+
+        public Identifier Identifier { get; }
+
+        public bool Can(IntType type) => true;
+
+        public bool Can(DoubleType type) => true;
+
+        public bool Can(BoolType type) => false;
+
+        public override string GenCode()
+        {
+            Console.WriteLine($"Read to {Identifier.Name}");
+
+            return null;
+        }
+    }
+
+    public class ReadHexInstruction : InstructionNode,ITypeVisitor
+    {
+        public ReadHexInstruction(Identifier identifier)
+        {
+            Identifier = identifier;
+            if (!identifier.Type.Accept(this))
+            {
+                ParserCS.ReportError("Read HEX instruction expects int identifier");
+            }
+        }
+
+        public Identifier Identifier { get; }
+        public bool Can(IntType type) => true;
+
+        public bool Can(DoubleType type) => false;
+
+        public bool Can(BoolType type) => false;
+        public override string GenCode()
+        {
+            Console.WriteLine($"Read HEX to {Identifier.Name}");
+
+            return null;
+        }
+    }
+    #endregion Read
+
+    #region Write
+
+    public class WriteInstruction : InstructionNode, ITypeVisitor
+    {
+        public WriteInstruction(Identifier identifier)
+        {
+            Identifier = identifier;
+            if (!identifier.Type.Accept(this))
+            {
+                ParserCS.ReportError("Write instruction expects int, double or bool identifier");
+            }
+        }
+
+        public Identifier Identifier { get; }
+
+        public bool Can(IntType type) => true;
+
+        public bool Can(DoubleType type) => true;
+
+        public bool Can(BoolType type) => true;
+
+        public override string GenCode()
+        {
+            Console.WriteLine($"Write {Identifier.Name}");
+
+            return null;
+        }
+    }
+
+    public class WriteHexInstruction : InstructionNode, ITypeVisitor
+    {
+        public WriteHexInstruction(Identifier identifier)
+        {
+            Identifier = identifier;
+            if (!identifier.Type.Accept(this))
+            {
+                ParserCS.ReportError("Write HEX instruction expects int identifier");
+            }
+        }
+
+        public Identifier Identifier { get; }
+        public bool Can(IntType type) => true;
+
+        public bool Can(DoubleType type) => false;
+
+        public bool Can(BoolType type) => false;
+        public override string GenCode()
+        {
+            Console.WriteLine($"Write HEX {Identifier.Name}");
+
+            return null;
+        }
+    }
+
+    public class WriteStringInstruction : InstructionNode
+    {
+        public WriteStringInstruction(string s)
+        {
+            S = s;
+        }
+
+        public Identifier Identifier { get; }
+        public string S { get; }
+      
+        public override string GenCode()
+        {
+            Console.WriteLine($"Write {S}");
+
+            return null;
+        }
+    }
+    #endregion Write
+
+    #region Return
+    public class ReturnInstruction : InstructionNode
+    {
+        public override string GenCode()
+        {
+            Console.WriteLine("ret i32 0");
+
+            return null;
+        }
+    }
+
+
+    #endregion
+
 
     #region Main
     class Program
