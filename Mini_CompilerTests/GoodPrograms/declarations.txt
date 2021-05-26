@@ -1,0 +1,6 @@
+program
+{
+   int i1,i2,i3,i4,i5,iagsdas,iFASF,IFAfasf,I;
+   double d1,d2,d3,d4,dasd,DDASDAS,DDasdasd;
+   bool b1,b2,b3,b4,b423,badsgas,BASDFAS,BBSADasdfsaB;
+}

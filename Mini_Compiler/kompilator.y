@@ -64,7 +64,7 @@
 start           : Program blockInstruction { RootNode  = $2; }
                 ;
 
-blockInstruction: OpenBracket declarations instructions CloseBracket   { $$  = new blockInstructionInstructionNode($2, $3); }
+blockInstruction: OpenBracket declarations instructions CloseBracket   { $$  = new BlockInstructionNode($2, $3); }
                 ;
 
 declarations    : declarations declaration { $$ = $1; $$.Add($2); }

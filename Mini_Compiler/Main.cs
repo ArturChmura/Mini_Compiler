@@ -58,9 +58,9 @@ namespace Mini_Compiler
         }
 
         static int registerNumber = 0;
-        public static string GetUniqeRegisterNumber()
+        public static string GetUniqeRegister()
         {
-            return (++registerNumber).ToString();
+            return "%" + (++registerNumber).ToString();
         }
     }
     #endregion
@@ -70,6 +70,7 @@ namespace Mini_Compiler
     public interface IType
     {
         string TypeName { get; }
+        string LLVMName { get; }
         bool CanAssign(IType type);
         bool CanConvertToInt();
         bool CanConvertToDouble();
@@ -77,9 +78,12 @@ namespace Mini_Compiler
         bool Accept(ITypeVisitor visitor);
     }
 
+
     public class IntType : IType
     {
         public string TypeName => "int";
+
+        public string LLVMName => "i32";
 
         public bool Accept(ITypeVisitor visitor)
         {
@@ -97,6 +101,7 @@ namespace Mini_Compiler
     public class DoubleType : IType
     {
         public string TypeName => "double";
+        public string LLVMName => "double";
         public bool Accept(ITypeVisitor visitor)
         {
             return visitor.Can(this);
@@ -111,6 +116,7 @@ namespace Mini_Compiler
     public class BoolType : IType
     {
         public string TypeName => "bool";
+        public string LLVMName => "i1";
         public bool Accept(ITypeVisitor visitor)
         {
             return visitor.Can(this);
@@ -148,13 +154,11 @@ namespace Mini_Compiler
 
         public string GenCode()
         {
-            string ret = Type.TypeName;
             foreach (var ident in Identifiers)
             {
-                ret += " " + ident;
+                Emiter.EmitCode($"%{ident} = alloca {Type.LLVMName}");
             }
-            Console.WriteLine(ret);
-            return ret;
+            return null;
         }
     }
     public abstract class InstructionNode : INode
@@ -218,8 +222,8 @@ namespace Mini_Compiler
 
         public string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
-            Console.WriteLine($"{Name} to regiser {register}");
+            var register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"%{register} = load {Type.LLVMName}, {Type.LLVMName}* %{Name}");
             return register;
         }
     }
@@ -268,7 +272,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            return Value.ToString();
+            return string.Format(CultureInfo.InvariantCulture, "{0:0.0###############}", Value);
         }
     }
 
@@ -284,7 +288,15 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            return Value.ToString();
+            if(Value)
+            {
+                return "1";
+            }
+            else
+            {
+                return "0";
+            }
+            
         }
     }
     #endregion ConstantExpressions
@@ -331,7 +343,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var registerNumber = ParserCS.GetUniqeRegisterNumber();
+            var registerNumber = ParserCS.GetUniqeRegister();
             var exRegisterNumber = Expression.GenCode();
             Console.WriteLine($"-{exRegisterNumber} to register {registerNumber}");
             return registerNumber;
@@ -347,7 +359,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var registerNumber = ParserCS.GetUniqeRegisterNumber();
+            var registerNumber = ParserCS.GetUniqeRegister();
             var exRegisterNumber = Expression.GenCode();
             Console.WriteLine($"~{exRegisterNumber} to register {registerNumber}");
             return registerNumber;
@@ -363,7 +375,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var registerNumber = ParserCS.GetUniqeRegisterNumber();
+            var registerNumber = ParserCS.GetUniqeRegister();
             var exRegisterNumber = Expression.GenCode();
             Console.WriteLine($"!{exRegisterNumber} to register {registerNumber}");
             return registerNumber;
@@ -379,7 +391,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var registerNumber = ParserCS.GetUniqeRegisterNumber();
+            var registerNumber = ParserCS.GetUniqeRegister();
             var exRegisterNumber = Expression.GenCode();
             Console.WriteLine($"(int){exRegisterNumber} to register {registerNumber}");
             return registerNumber;
@@ -395,7 +407,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var registerNumber = ParserCS.GetUniqeRegisterNumber();
+            var registerNumber = ParserCS.GetUniqeRegister();
             var exRegisterNumber = Expression.GenCode();
             Console.WriteLine($"(double){exRegisterNumber} to register {registerNumber}");
             return registerNumber;
@@ -436,7 +448,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} | {rExpReg} to register {register}");
@@ -449,7 +461,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} & {rExpReg} to register {register}");
@@ -496,7 +508,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} + {rExpReg} to register {register}");
@@ -509,7 +521,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} - {rExpReg} to register {register}");
@@ -523,7 +535,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} * {rExpReg} to register {register}");
@@ -537,7 +549,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} / {rExpReg} to register {register}");
@@ -605,7 +617,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} == {rExpReg} to register {register}");
@@ -619,7 +631,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} != {rExpReg} to register {register}");
@@ -648,7 +660,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} > {rExpReg} to register {register}");
@@ -662,7 +674,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} >= {rExpReg} to register {register}");
@@ -675,7 +687,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} < {rExpReg} to register {register}");
@@ -689,7 +701,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} <= {rExpReg} to register {register}");
@@ -728,7 +740,7 @@ namespace Mini_Compiler
         public AndExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} && {rExpReg} to register {register}");
@@ -741,7 +753,7 @@ namespace Mini_Compiler
         public OrExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegisterNumber();
+            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
             Console.WriteLine($"{lExpReg} || {rExpReg} to register {register}");
@@ -771,8 +783,9 @@ namespace Mini_Compiler
         public string GenCode()
         {
             var rightRegister = Expression.GenCode();
-            var leftRegister = ParserCS.GetUniqeRegisterNumber();
-            Console.WriteLine($"{Identifier.Name} = {rightRegister}");
+            Emiter.EmitCode($"store {Identifier.Type.LLVMName} {rightRegister}, {Identifier.Type.LLVMName}* %{Identifier.Name}");
+            var leftRegister = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{leftRegister} = load {Identifier.Type.LLVMName}, {Identifier.Type.LLVMName}* %{Identifier.Name}");
             return leftRegister;
         }
     }
@@ -1004,13 +1017,32 @@ namespace Mini_Compiler
     }
     #endregion Write
 
+    public static class Emiter
+    {
+        public static void EmitProlog()
+        {
+            EmitCode("; prolog");
+            EmitCode("define i32 @main()");
+            EmitCode("{");
+        }
+        public static void EmitEpilog()
+        {
+            EmitCode("ret i32 0"); 
+            EmitCode("}");
+        }
+        public static StreamWriter sw { get; set; }
+        public static void EmitCode(string code)
+        {
+            sw.WriteLine(code);
+        }
+    }
+
     #region Return
     public class ReturnInstruction : InstructionNode
     {
         public override string GenCode()
         {
-            Console.WriteLine("ret i32 0");
-
+            Emiter.EmitCode("ret i32 0");
             return null;
         }
     }
@@ -1020,9 +1052,9 @@ namespace Mini_Compiler
 
 
     #region Main
-    class Program
+    public class Program
     {
-        static int Main(string[] args)
+        public static int Main(string[] args)
         {
             string fileName;
             if (args.Length == 0)
@@ -1051,15 +1083,25 @@ namespace Mini_Compiler
 
             if (parser.ErrorsCount > 0 || scanner.ErrorsCount > 0)
             {
+
                 Console.WriteLine("Not compiled.");
-                Console.ReadLine();
                 return 1;
             }
             else
             {
+                try
+                {
+                    Emiter.sw = new StreamWriter(fileName + ".ll");
+                }
+                catch (Exception)
+                {
+                    return 1;
+                }
+                Emiter.EmitProlog();
                 parser.RootNode.GenCode();
+                Emiter.EmitEpilog();
+                Emiter.sw.Close();
                 Console.WriteLine("Compiled.");
-                Console.ReadLine();
                 return 0;
             }
 

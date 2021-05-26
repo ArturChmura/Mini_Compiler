@@ -1,0 +1,9 @@
+program
+{
+   int i;
+   bool b;
+   double d;
+   i = 1;
+   d = 1.0000000000000;
+   b = true;
+}
