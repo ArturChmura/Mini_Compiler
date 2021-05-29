@@ -1,0 +1,42 @@
+program
+{
+   int i1,i2,i3;
+   double d1,d2,d3;
+   bool b1,b2,b3;
+
+
+   i1=i2=3;
+
+   d1 = d2 = 4.0;
+
+b1 = true;
+b2 = false;
+
+	b3 = b1 == b2;
+	b3 = b1 != b2;
+	b3 = i1 == i2;
+	b3 = i1 != i2;
+	b3 = d1 == d2;
+	b3 = d1 != d2;
+	b3 = d1 == i2;
+	b3 = i1 != d2;
+	
+
+	b3 = i1 < i2;
+	b3 = i1 <= i2;
+	b3 = d1 < d2;
+	b3 = d1 <= d2;
+	b3 = d1 < i2;
+	b3 = i1 <= d2;
+
+	
+
+	b3 = i1 > i2;
+	b3 = i1 >= i2;
+	b3 = d1 > d2;
+	b3 = d1 >= d2;
+	b3 = d1 > i2;
+	b3 = i1 >= d2;
+
+
+}

@@ -1,0 +1,28 @@
+
+program
+{
+int i1,i2,i3,i4,ir;
+double d15,d25,d35,d45,dr;
+bool bt, bf,br;
+
+i1  = 1;
+i2 = 2;
+i3  = 3;
+i4  = 4;
+
+d15 = 1.5;
+d25 = 2.5;
+d35 = 3.5;
+d45 = 4.5;
+
+bt = true;
+bf = false;
+ br = 1<=1-((int)!bt)*7 || ( bf && bf);
+
+while (bf != false)
+{
+	// jak siê zapêtli to Ÿle
+}
+
+}
+

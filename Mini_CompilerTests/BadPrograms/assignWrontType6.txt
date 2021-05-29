@@ -1,0 +1,6 @@
+program
+{
+ double d;
+ int i;
+ i = i = d = i; 
+}

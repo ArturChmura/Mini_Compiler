@@ -1,0 +1,6 @@
+program
+{
+ bool b1;
+ double b2;
+ b1!=b2;
+}

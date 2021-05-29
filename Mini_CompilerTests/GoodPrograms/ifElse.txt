@@ -1,0 +1,20 @@
+program
+{
+
+bool b1;
+
+if(b1)
+{
+	b1 = false;
+}
+
+if(b1)
+{
+	b1 = false;
+}
+else
+{
+	b1 = true;
+}
+
+}

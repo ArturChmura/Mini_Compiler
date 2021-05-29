@@ -1,0 +1,15 @@
+
+program
+{
+bool br;
+bool b1,b2,b3;
+
+
+br = (true) ||(true || false) ;
+
+while(br != true)
+{
+ // jak siê zapêtli to Ÿle
+}
+
+}

@@ -1,0 +1,8 @@
+program
+{
+ int i1,i2;
+ double d;
+
+ i1 = i2 * d; // result should be double
+
+}

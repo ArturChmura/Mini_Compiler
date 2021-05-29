@@ -1,0 +1,5 @@
+program
+{
+  double b;
+  !b;
+}

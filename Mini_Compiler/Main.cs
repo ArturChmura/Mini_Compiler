@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using QUT.Gppg;
 
 namespace Mini_Compiler
 {
@@ -19,6 +16,10 @@ namespace Mini_Compiler
         public ParserCS(Scanner _scanner)
         {
             scanner = _scanner;
+            registerNumber = 0;
+            labelNumber = 0;
+            ErrorsCount = 0;
+            strings = new List<StringLex>();
         }
         public static int ErrorsCount { get; private set; }
 
@@ -28,27 +29,32 @@ namespace Mini_Compiler
             ErrorsCount++;
             Console.WriteLine($"Error on line {scanner.LineNumber}: {message}");
         }
-        public void MakeDeclaration(IType type, List<string> identifiersNames)
+        public DeclarationNode MakeDeclaration(IType type, List<string> identifiersNames)
         {
+            List<string> names = new List<string>();
             foreach (var identifierName in identifiersNames)
             {
-                if (declaredIdentifiers.Any(di => di.Name == identifierName))
+                if (declaredIdentifiers.Any(di => di.OriginalName == identifierName))
                 {
-                    ReportError($"Identifier \"{identifierName}\" already used.");
+                    ReportError($"Variable \"{identifierName}\" already declared");
                 }
                 else
                 {
-                    declaredIdentifiers.Add(new Identifier(type, identifierName));
+                    var iden = new Identifier(type, identifierName);
+                    declaredIdentifiers.Add(iden); ;
+                    names.Add(iden.Name);
                 }
             }
+            DeclarationNode declarationNode = new DeclarationNode(type, names);
+            return declarationNode;
         }
 
         public Identifier GetIdentifier(string name)
         {
-            var ident = declaredIdentifiers.FirstOrDefault(di => di.Name == name);
+            var ident = declaredIdentifiers.FirstOrDefault(di => di.OriginalName == name);
             if (ident == null)
             {
-                ReportError($"Identifier \"{name}\" undeclared.");
+                ReportError($"Undeclared variable \"{name}\"");
                 return new Identifier(new IntType(), "");
             }
             else
@@ -60,76 +66,233 @@ namespace Mini_Compiler
         static int registerNumber = 0;
         public static string GetUniqeRegister()
         {
-            return "%" + (++registerNumber).ToString();
+            return "%t" + (++registerNumber).ToString();
         }
+
+        static int labelNumber = 0;
+        public static string GetUniqeLabel()
+        {
+            return "label" + (++labelNumber).ToString();
+        }
+
+        public static List<StringLex> strings;
     }
     #endregion
 
 
     #region Type
+
+    public interface IVoidTypeVisitor
+    {
+        void Visit(IntType type);
+        void Visit(DoubleType type);
+        void Visit(BoolType type);
+    }
+
     public interface IType
     {
         string TypeName { get; }
         string LLVMName { get; }
-        bool CanAssign(IType type);
-        bool CanConvertToInt();
-        bool CanConvertToDouble();
-        bool CanConvertToBool();
-        bool Accept(ITypeVisitor visitor);
+        T Accept<T>(ITypeVisitor<T> visitor);
+        void AcceptVoid(IVoidTypeVisitor visitor);
     }
 
 
     public class IntType : IType
     {
         public string TypeName => "int";
-
         public string LLVMName => "i32";
-
-        public bool Accept(ITypeVisitor visitor)
-        {
-            return visitor.Can(this);
-        }
-
-        public bool CanAssign(IType type) => type.CanConvertToInt();
-
-        public bool CanConvertToBool() => false;
-
-        public bool CanConvertToDouble() => true;
-
-        public bool CanConvertToInt() => true;
+        public T Accept<T>(ITypeVisitor<T> visitor) => visitor.Visit(this);
+        public void AcceptVoid(IVoidTypeVisitor visitor) => visitor.Visit(this);
     }
     public class DoubleType : IType
     {
         public string TypeName => "double";
         public string LLVMName => "double";
-        public bool Accept(ITypeVisitor visitor)
-        {
-            return visitor.Can(this);
-        }
-        public bool CanAssign(IType type) => type.CanConvertToDouble();
-        public bool CanConvertToBool() => false;
-
-        public bool CanConvertToDouble() => true;
-
-        public bool CanConvertToInt() => false;
+        public T Accept<T>(ITypeVisitor<T> visitor) => visitor.Visit(this);
+        public void AcceptVoid(IVoidTypeVisitor visitor) => visitor.Visit(this);
     }
     public class BoolType : IType
     {
         public string TypeName => "bool";
         public string LLVMName => "i1";
-        public bool Accept(ITypeVisitor visitor)
-        {
-            return visitor.Can(this);
-        }
-        public bool CanAssign(IType type) => type.CanConvertToBool();
-        public bool CanConvertToBool() => true;
-
-        public bool CanConvertToDouble() => false;
-
-        public bool CanConvertToInt() => false;
+        public T Accept<T>(ITypeVisitor<T> visitor) => visitor.Visit(this);
+        public void AcceptVoid(IVoidTypeVisitor visitor) => visitor.Visit(this);
     }
+
+
+
     #endregion Type
 
+    #region Converters
+
+    public abstract class AConverter
+    {
+        protected IType _to;
+        protected string _fromRegister;
+        protected string _result;
+    }
+    public class Converter : AConverter, IVoidTypeVisitor
+    {
+        public string Convert(IType from, IType to, string fromRegister)
+        {
+            _to = to;
+            _fromRegister = fromRegister;
+            from.AcceptVoid(this);
+            return _result;
+        }
+        public void Visit(IntType type)
+        {
+            _result = new FromIntConverter().Convert(_to, _fromRegister);
+        }
+
+        public void Visit(DoubleType type)
+        {
+            _result = new FromDoubleConverter().Convert(_to, _fromRegister);
+        }
+
+        public void Visit(BoolType type)
+        {
+            _result = new FromBoolConverter().Convert(_to, _fromRegister);
+        }
+    }
+    public class FromIntConverter : AConverter, IVoidTypeVisitor
+    {
+        public string Convert(IType to, string fromRegister)
+        {
+            _fromRegister = fromRegister;
+            to.AcceptVoid(this);
+            return _result;
+        }
+        public void Visit(IntType type)
+        {
+            _result = _fromRegister;
+        }
+
+        public void Visit(DoubleType type)
+        {
+            string register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = sitofp i32 {_fromRegister} to double ");
+            _result = register;
+        }
+
+        public void Visit(BoolType type)
+        {
+            throw new ApplicationException("There is no such conversion");
+        }
+    }
+
+    public class FromDoubleConverter : AConverter, IVoidTypeVisitor
+    {
+        public string Convert(IType to, string fromRegister)
+        {
+            _fromRegister = fromRegister;
+            to.AcceptVoid(this);
+            return _result;
+        }
+        public void Visit(IntType type)
+        {
+            string register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = fptosi double {_fromRegister} to i32");
+            _result = register;
+        }
+
+        public void Visit(DoubleType type)
+        {
+            _result = _fromRegister;
+        }
+
+        public void Visit(BoolType type)
+        {
+            throw new ApplicationException("There is no such conversion");
+        }
+    }
+
+    public class FromBoolConverter : AConverter, IVoidTypeVisitor
+    {
+        public string Convert(IType to, string register)
+        {
+            _fromRegister = register;
+            to.AcceptVoid(this);
+            return _result;
+        }
+        public void Visit(IntType type)
+        {
+            string register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = zext i1 {_fromRegister} to i32");
+            _result = register;
+        }
+
+        public void Visit(DoubleType type)
+        {
+            throw new ApplicationException("There is no such conversion");
+        }
+
+        public void Visit(BoolType type)
+        {
+            _result = _fromRegister;
+        }
+    }
+
+    public abstract class AImplicit
+    {
+        protected IType _to;
+    }
+    public class ImplicitConverter : AImplicit, ITypeVisitor<bool>
+    {
+        public bool CanConvertImplicitly(IType from, IType to)
+        {
+            _to = to;
+            return from.Accept(this);
+        }
+        public bool Visit(IntType type)
+        {
+            return new IntImplicitConverter().CanConvertImplicitly(_to);
+        }
+
+        public bool Visit(DoubleType type)
+        {
+            return new DoubleImplicitConverter().CanConvertImplicitly(_to);
+        }
+
+        public bool Visit(BoolType type)
+        {
+            return new BoolImplicitConverter().CanConvertImplicitly(_to);
+        }
+    }
+    public class IntImplicitConverter : AImplicit, ITypeVisitor<bool>
+    {
+        public bool CanConvertImplicitly(IType to)
+        {
+            return to.Accept(this);
+        }
+        public bool Visit(IntType type) => true;
+        public bool Visit(DoubleType type) => true;
+        public bool Visit(BoolType type) => false;
+    }
+    public class DoubleImplicitConverter : AImplicit, ITypeVisitor<bool>
+    {
+        public bool CanConvertImplicitly(IType to)
+        {
+            return to.Accept(this);
+        }
+        public bool Visit(IntType type) => false;
+        public bool Visit(DoubleType type) => true;
+        public bool Visit(BoolType type) => false;
+    }
+    public class BoolImplicitConverter : AImplicit, ITypeVisitor<bool>
+    {
+        public bool CanConvertImplicitly(IType to)
+        {
+            return to.Accept(this);
+        }
+        public bool Visit(IntType type) => false;
+        public bool Visit(DoubleType type) => false;
+        public bool Visit(BoolType type) => true;
+    }
+
+
+    #endregion Converters
 
     #region Nodes
     public interface INode
@@ -143,11 +306,6 @@ namespace Mini_Compiler
         {
             Type = type;
             Identifiers = identifiers;
-        }
-        public DeclarationNode(IType type, string identifier)
-        {
-            Type = type;
-            Identifiers = new List<string> { identifier };
         }
         public IType Type { get; }
         public List<string> Identifiers { get; }
@@ -215,15 +373,17 @@ namespace Mini_Compiler
         public Identifier(IType type, string name)
         {
             Type = type;
-            Name = name;
+            OriginalName = name;
+            Name = "v" + name;
         }
         public IType Type { get; }
         public string Name { get; }
+        public string OriginalName { get; }
 
         public string GenCode()
         {
             var register = ParserCS.GetUniqeRegister();
-            Emiter.EmitCode($"%{register} = load {Type.LLVMName}, {Type.LLVMName}* %{Name}");
+            Emiter.EmitCode($"{register} = load {Type.LLVMName}, {Type.LLVMName}* %{Name}");
             return register;
         }
     }
@@ -288,7 +448,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            if(Value)
+            if (Value)
             {
                 return "1";
             }
@@ -296,22 +456,22 @@ namespace Mini_Compiler
             {
                 return "0";
             }
-            
+
         }
     }
     #endregion ConstantExpressions
 
 
-    public interface ITypeVisitor
+    public interface ITypeVisitor<T>
     {
-        bool Can(IntType type);
-        bool Can(DoubleType type);
-        bool Can(BoolType type);
+        T Visit(IntType type);
+        T Visit(DoubleType type);
+        T Visit(BoolType type);
     }
 
     #region UnaryExpressions
 
-    public abstract class UnaryExpression : IExpression, ITypeVisitor
+    public abstract class UnaryExpression : IExpression, ITypeVisitor<bool>
     {
         public UnaryExpression(IExpression expression)
         {
@@ -321,102 +481,121 @@ namespace Mini_Compiler
                 ParserCS.ReportError("Wrong type on unary expression");
             }
         }
-        public IType Type => Expression.Type;
+        public abstract IType Type { get; }
 
         public IExpression Expression { get; }
 
-        public abstract bool Can(IntType type);
+        public abstract bool Visit(IntType type);
 
-        public abstract bool Can(DoubleType type);
+        public abstract bool Visit(DoubleType type);
 
-        public abstract bool Can(BoolType type);
+        public abstract bool Visit(BoolType type);
 
         public abstract string GenCode();
     }
 
-    public class UnaryMinusExpression : UnaryExpression, ITypeVisitor
+    public class UnaryMinusExpression : UnaryExpression, ITypeVisitor<bool>, ITypeVisitor<string>
     {
         public UnaryMinusExpression(IExpression expression) : base(expression) { }
-        public override bool Can(IntType type) => true;
-        public override bool Can(DoubleType type) => true;
-        public override bool Can(BoolType type) => false;
+        public override IType Type => Expression.Type;
+        public override bool Visit(IntType type) => true;
+        public override bool Visit(DoubleType type) => true;
+        public override bool Visit(BoolType type) => false;
 
         public override string GenCode()
         {
-            var registerNumber = ParserCS.GetUniqeRegister();
-            var exRegisterNumber = Expression.GenCode();
-            Console.WriteLine($"-{exRegisterNumber} to register {registerNumber}");
-            return registerNumber;
+            return Expression.Type.Accept<string>(this);
+        }
+
+        string ITypeVisitor<string>.Visit(IntType type)
+        {
+            var exRegister = Expression.GenCode();
+            var register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = mul i32 -1, {exRegister}");
+            return register;
+        }
+
+        string ITypeVisitor<string>.Visit(DoubleType type)
+        {
+            var exRegister = Expression.GenCode();
+            var register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = fneg double {exRegister} ");
+            return register;
+        }
+
+        string ITypeVisitor<string>.Visit(BoolType type)
+        {
+            throw new NotImplementedException();
         }
     }
 
-    public class BitNegationExpression : UnaryExpression, ITypeVisitor
+    public class BitNegationExpression : UnaryExpression, ITypeVisitor<bool>
     {
         public BitNegationExpression(IExpression expression) : base(expression) { }
-        public override bool Can(IntType type) => true;
-        public override bool Can(DoubleType type) => false;
-        public override bool Can(BoolType type) => false;
+        public override IType Type => Expression.Type;
+        public override bool Visit(IntType type) => true;
+        public override bool Visit(DoubleType type) => false;
+        public override bool Visit(BoolType type) => false;
 
         public override string GenCode()
         {
-            var registerNumber = ParserCS.GetUniqeRegister();
             var exRegisterNumber = Expression.GenCode();
-            Console.WriteLine($"~{exRegisterNumber} to register {registerNumber}");
+            var registerNumber = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{registerNumber} = xor i32 {exRegisterNumber}, -1 ");
             return registerNumber;
         }
     }
 
-    public class LogicNegationExpression : UnaryExpression, ITypeVisitor
+    public class LogicNegationExpression : UnaryExpression, ITypeVisitor<bool>
     {
         public LogicNegationExpression(IExpression expression) : base(expression) { }
-        public override bool Can(IntType type) => false;
-        public override bool Can(DoubleType type) => false;
-        public override bool Can(BoolType type) => true;
+        public override IType Type => Expression.Type;
+        public override bool Visit(IntType type) => false;
+        public override bool Visit(DoubleType type) => false;
+        public override bool Visit(BoolType type) => true;
 
         public override string GenCode()
         {
-            var registerNumber = ParserCS.GetUniqeRegister();
-            var exRegisterNumber = Expression.GenCode();
-            Console.WriteLine($"!{exRegisterNumber} to register {registerNumber}");
-            return registerNumber;
+            var exRegister = Expression.GenCode();
+            var register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = mul i1 -1, {exRegister}");
+            return register;
         }
     }
 
-    public class IntConversionExpression : UnaryExpression, ITypeVisitor
+    public class IntConversionExpression : UnaryExpression, ITypeVisitor<bool>
     {
         public IntConversionExpression(IExpression expression) : base(expression) { }
-        public override bool Can(IntType type) => true;
-        public override bool Can(DoubleType type) => true;
-        public override bool Can(BoolType type) => true;
+        public override IType Type => new IntType();
+        public override bool Visit(IntType type) => true;
+        public override bool Visit(DoubleType type) => true;
+        public override bool Visit(BoolType type) => true;
 
         public override string GenCode()
         {
-            var registerNumber = ParserCS.GetUniqeRegister();
-            var exRegisterNumber = Expression.GenCode();
-            Console.WriteLine($"(int){exRegisterNumber} to register {registerNumber}");
-            return registerNumber;
+            var expReg = Expression.GenCode();
+            return new Converter().Convert(Expression.Type, this.Type, expReg);
         }
     }
 
-    public class DoubleConversionExpression : UnaryExpression, ITypeVisitor
+    public class DoubleConversionExpression : UnaryExpression, ITypeVisitor<bool>
     {
         public DoubleConversionExpression(IExpression expression) : base(expression) { }
-        public override bool Can(IntType type) => true;
-        public override bool Can(DoubleType type) => true;
-        public override bool Can(BoolType type) => false;
+        public override IType Type => new DoubleType();
+        public override bool Visit(IntType type) => true;
+        public override bool Visit(DoubleType type) => true;
+        public override bool Visit(BoolType type) => false;
 
         public override string GenCode()
         {
-            var registerNumber = ParserCS.GetUniqeRegister();
-            var exRegisterNumber = Expression.GenCode();
-            Console.WriteLine($"(double){exRegisterNumber} to register {registerNumber}");
-            return registerNumber;
+            var expReg = Expression.GenCode();
+            return new Converter().Convert(Expression.Type, this.Type, expReg);
         }
     }
     #endregion UnaryExpressions
 
     #region BitsExpressions
-    public abstract class BitsExpression : IExpression, ITypeVisitor
+    public abstract class BitsExpression : IExpression, ITypeVisitor<bool>
     {
         public BitsExpression(IExpression leftExpression, IExpression rightExpression)
         {
@@ -433,11 +612,9 @@ namespace Mini_Compiler
         public IExpression LeftExpression { get; }
         public IExpression RightExpression { get; }
 
-        public bool Can(IntType type) => true;
-
-        public bool Can(DoubleType type) => false;
-
-        public bool Can(BoolType type) => false;
+        public bool Visit(IntType type) => true;
+        public bool Visit(DoubleType type) => false;
+        public bool Visit(BoolType type) => false;
 
         public abstract string GenCode();
     }
@@ -448,10 +625,10 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} | {rExpReg} to register {register}");
+            var register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = or i32 {lExpReg}, {rExpReg}");
             return register;
         }
     }
@@ -461,17 +638,17 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegister();
             var lExpReg = LeftExpression.GenCode();
             var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} & {rExpReg} to register {register}");
+            var register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = and i32 {lExpReg}, {rExpReg}");
             return register;
         }
     }
     #endregion BitsExpressions
 
     #region AdditivesMultiplicativeExpressions
-    public abstract class AdditivesMultiplicativeExpressions : IExpression, ITypeVisitor
+    public abstract class AdditivesMultiplicativeExpressions : IExpression, ITypeVisitor<bool>
     {
         public AdditivesMultiplicativeExpressions(IExpression leftExpression, IExpression rightExpression)
         {
@@ -483,49 +660,58 @@ namespace Mini_Compiler
             }
         }
 
-        private bool isDouble = false;
+        protected bool isDouble = false;
         public IType Type { get { if (isDouble) return new DoubleType(); return new IntType(); } }
 
         public IExpression LeftExpression { get; }
         public IExpression RightExpression { get; }
 
-        public bool Can(IntType type) => true;
+        public bool Visit(IntType type) => true;
 
-        public bool Can(DoubleType type)
+        public bool Visit(DoubleType type)
         {
             isDouble = true;
             return true;
         }
 
-        public bool Can(BoolType type) => false;
+        public bool Visit(BoolType type) => false;
 
-        public abstract string GenCode();
+        protected abstract string GetOperator();
+
+        public string GenCode()
+        {
+            var lExpReg = LeftExpression.GenCode();
+            var rExpReg = RightExpression.GenCode();
+
+            var lTyped = new Converter().Convert(LeftExpression.Type, this.Type, lExpReg);
+            var rTyped = new Converter().Convert(RightExpression.Type, this.Type, rExpReg);
+
+            var register = ParserCS.GetUniqeRegister();
+
+            Emiter.EmitCode($"{register} = {GetOperator()} {Type.LLVMName} {lTyped}, {rTyped}");
+
+            return register;
+        }
     }
 
     public class Sum : AdditivesMultiplicativeExpressions
     {
         public Sum(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
 
-        public override string GenCode()
+        protected override string GetOperator()
         {
-            var register = ParserCS.GetUniqeRegister();
-            var lExpReg = LeftExpression.GenCode();
-            var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} + {rExpReg} to register {register}");
-            return register;
+            if (isDouble) return "fadd";
+            return "add";
         }
     }
     public class Subtraction : AdditivesMultiplicativeExpressions
     {
         public Subtraction(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
 
-        public override string GenCode()
+        protected override string GetOperator()
         {
-            var register = ParserCS.GetUniqeRegister();
-            var lExpReg = LeftExpression.GenCode();
-            var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} - {rExpReg} to register {register}");
-            return register;
+            if (isDouble) return "fsub";
+            return "sub";
         }
     }
 
@@ -533,13 +719,10 @@ namespace Mini_Compiler
     {
         public Multiplication(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
 
-        public override string GenCode()
+        protected override string GetOperator()
         {
-            var register = ParserCS.GetUniqeRegister();
-            var lExpReg = LeftExpression.GenCode();
-            var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} * {rExpReg} to register {register}");
-            return register;
+            if (isDouble) return "fmul";
+            return "mul";
         }
     }
 
@@ -547,19 +730,16 @@ namespace Mini_Compiler
     {
         public Division(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
 
-        public override string GenCode()
+        protected override string GetOperator()
         {
-            var register = ParserCS.GetUniqeRegister();
-            var lExpReg = LeftExpression.GenCode();
-            var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} / {rExpReg} to register {register}");
-            return register;
+            if (isDouble) return "fdiv";
+            return "sdiv";
         }
     }
     #endregion AdditivesMultiplicativeExpressions
 
     #region RelationsExpressions
-    public abstract class RelationsExpression : IExpression, ITypeVisitor
+    public abstract class RelationsExpression : IExpression, ITypeVisitor<bool>
     {
         public RelationsExpression(IExpression leftExpression, IExpression rightExpression)
         {
@@ -567,18 +747,50 @@ namespace Mini_Compiler
             RightExpression = rightExpression;
         }
 
+        protected bool isDouble = false;
+        protected bool isNumber = false;
+        protected bool isBool = false;
+
         public IType Type => new BoolType();
 
         public IExpression LeftExpression { get; }
         public IExpression RightExpression { get; }
 
-        public abstract bool Can(IntType type);
+        public abstract bool Visit(IntType type);
 
-        public abstract bool Can(DoubleType type);
+        public abstract bool Visit(DoubleType type);
 
-        public abstract bool Can(BoolType type);
+        public abstract bool Visit(BoolType type);
+        protected abstract string GetOperator();
 
-        public abstract string GenCode();
+        public string GenCode()
+        {
+            var lExpReg = LeftExpression.GenCode();
+            var rExpReg = RightExpression.GenCode();
+
+            string lTyped = lExpReg;
+            string rTyped = rExpReg;
+
+            string type;
+            if (isDouble)
+            {
+                type = "double";
+                lTyped = new Converter().Convert(LeftExpression.Type, new DoubleType(), lExpReg);
+                rTyped = new Converter().Convert(RightExpression.Type, new DoubleType(), rExpReg);
+            }
+            else if (isNumber)
+            {
+                type = "i32";
+            }
+            else type = "i1";
+            string cmp;
+            if (isDouble) cmp = "fcmp";
+            else cmp = "icmp";
+            var register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = {cmp} {GetOperator()} {type} {lTyped}, {rTyped}");
+
+            return register;
+        }
     }
     public abstract class AllTypeRelationExpression : RelationsExpression
     {
@@ -589,21 +801,20 @@ namespace Mini_Compiler
                 ParserCS.ReportError("Wrong type on relation expression");
             }
         }
-        bool isNumber = false;
-        bool isBool = false;
-        public override bool Can(IntType type)
+        public override bool Visit(IntType type)
         {
             isNumber = true;
             if (isBool) return false;
             return true;
         }
-        public override bool Can(DoubleType type)
+        public override bool Visit(DoubleType type)
         {
+            isDouble = true;
             isNumber = true;
             if (isBool) return false;
             return true;
         }
-        public override bool Can(BoolType type)
+        public override bool Visit(BoolType type)
         {
             isBool = true;
             if (isNumber) return false;
@@ -615,13 +826,10 @@ namespace Mini_Compiler
     {
         public EqualsExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
 
-        public override string GenCode()
+        protected override string GetOperator()
         {
-            var register = ParserCS.GetUniqeRegister();
-            var lExpReg = LeftExpression.GenCode();
-            var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} == {rExpReg} to register {register}");
-            return register;
+            if (isDouble) return "oeq";
+            return "eq";
         }
     }
 
@@ -629,13 +837,10 @@ namespace Mini_Compiler
     {
         public NotequalsExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
 
-        public override string GenCode()
+        protected override string GetOperator()
         {
-            var register = ParserCS.GetUniqeRegister();
-            var lExpReg = LeftExpression.GenCode();
-            var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} != {rExpReg} to register {register}");
-            return register;
+            if (isDouble) return "une";
+            return "ne";
         }
     }
 
@@ -648,9 +853,18 @@ namespace Mini_Compiler
                 ParserCS.ReportError("Wrong type on relation expression");
             }
         }
-        public override bool Can(IntType type) => true;
-        public override bool Can(DoubleType type) => true;
-        public override bool Can(BoolType type) => false;
+        public override bool Visit(IntType type)
+        {
+            isNumber = true;
+            return true;
+        }
+        public override bool Visit(DoubleType type)
+        {
+            isNumber = true;
+            isDouble = true;
+            return true;
+        }
+        public override bool Visit(BoolType type) => false;
 
     }
 
@@ -658,13 +872,10 @@ namespace Mini_Compiler
     {
         public GreaterExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
 
-        public override string GenCode()
+        protected override string GetOperator()
         {
-            var register = ParserCS.GetUniqeRegister();
-            var lExpReg = LeftExpression.GenCode();
-            var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} > {rExpReg} to register {register}");
-            return register;
+            if (isDouble) return "ogt";
+            return "sgt";
         }
     }
 
@@ -672,26 +883,20 @@ namespace Mini_Compiler
     {
         public GreaterOrEqualExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
 
-        public override string GenCode()
+        protected override string GetOperator()
         {
-            var register = ParserCS.GetUniqeRegister();
-            var lExpReg = LeftExpression.GenCode();
-            var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} >= {rExpReg} to register {register}");
-            return register;
+            if (isDouble) return "oge";
+            return "sge";
         }
     }
     public class LessExpression : NumberRelationExpression
     {
         public LessExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
 
-        public override string GenCode()
+        protected override string GetOperator()
         {
-            var register = ParserCS.GetUniqeRegister();
-            var lExpReg = LeftExpression.GenCode();
-            var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} < {rExpReg} to register {register}");
-            return register;
+            if (isDouble) return "olt";
+            return "slt";
         }
     }
 
@@ -699,19 +904,16 @@ namespace Mini_Compiler
     {
         public LessOrEqualExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
 
-        public override string GenCode()
+        protected override string GetOperator()
         {
-            var register = ParserCS.GetUniqeRegister();
-            var lExpReg = LeftExpression.GenCode();
-            var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} <= {rExpReg} to register {register}");
-            return register;
+            if (isDouble) return "ole";
+            return "sle";
         }
     }
     #endregion RelationsExpressions
 
     #region LogicsExpressions
-    public abstract class LogicsExpression : IExpression, ITypeVisitor
+    public abstract class LogicsExpression : IExpression, ITypeVisitor<bool>
     {
         public LogicsExpression(IExpression leftExpression, IExpression rightExpression)
         {
@@ -728,9 +930,9 @@ namespace Mini_Compiler
         public IExpression LeftExpression { get; }
         public IExpression RightExpression { get; }
 
-        public bool Can(IntType type) => false;
-        public bool Can(DoubleType type) => false;
-        public bool Can(BoolType type) => true;
+        public bool Visit(IntType type) => false;
+        public bool Visit(DoubleType type) => false;
+        public bool Visit(BoolType type) => true;
 
         public abstract string GenCode();
     }
@@ -740,10 +942,26 @@ namespace Mini_Compiler
         public AndExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegister();
+            var labelStart = ParserCS.GetUniqeLabel();
+            var labelCondRight = ParserCS.GetUniqeLabel();
+            var labelCondRightEnd = ParserCS.GetUniqeLabel();
+            var labelAssign = ParserCS.GetUniqeLabel();
+
             var lExpReg = LeftExpression.GenCode();
+            Emiter.EmitCode($"br label %{labelStart}");
+            Emiter.EmitCode(labelStart + ":");
+            Emiter.EmitCode($"br i1 {lExpReg}, label %{labelCondRight}, label %{labelAssign}");
+
+            Emiter.EmitCode(labelCondRight + ":");
             var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} && {rExpReg} to register {register}");
+            Emiter.EmitCode($"br label %{labelCondRightEnd}");
+            Emiter.EmitCode(labelCondRightEnd + ":"); // ponieważ w RightExpression też mogą być etykiety, to dodajemy na koniec ektykietę aby phi zadziałało
+            Emiter.EmitCode($"br label %{labelAssign}");
+
+
+            Emiter.EmitCode(labelAssign + ":");
+            var register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = phi i1 [{lExpReg},%{labelStart}],[{rExpReg},%{labelCondRightEnd}]");
             return register;
         }
     }
@@ -753,10 +971,27 @@ namespace Mini_Compiler
         public OrExpression(IExpression leftExpression, IExpression rightExpression) : base(leftExpression, rightExpression) { }
         public override string GenCode()
         {
-            var register = ParserCS.GetUniqeRegister();
+
+            var labelStart = ParserCS.GetUniqeLabel();
+            var labelCondRight = ParserCS.GetUniqeLabel();
+            var labelCondRightEnd = ParserCS.GetUniqeLabel();
+            var labelAssign = ParserCS.GetUniqeLabel();
+
             var lExpReg = LeftExpression.GenCode();
+            Emiter.EmitCode($"br label %{labelStart}");
+            Emiter.EmitCode(labelStart + ":");
+            Emiter.EmitCode($"br i1 {lExpReg}, label %{labelAssign}, label %{labelCondRight}");
+
+            Emiter.EmitCode(labelCondRight + ":");
             var rExpReg = RightExpression.GenCode();
-            Console.WriteLine($"{lExpReg} || {rExpReg} to register {register}");
+            Emiter.EmitCode($"br label %{labelCondRightEnd}");
+            Emiter.EmitCode(labelCondRightEnd + ":"); // ponieważ w RightExpression też mogą być etykiety, to dodajemy na koniec ektykietę aby phi zadziałało
+            Emiter.EmitCode($"br label %{labelAssign}");
+
+
+            Emiter.EmitCode(labelAssign + ":");
+            var register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = phi i1 [{lExpReg},%{labelStart}],[{rExpReg},%{labelCondRightEnd}]");
             return register;
         }
     }
@@ -769,7 +1004,7 @@ namespace Mini_Compiler
         {
             Identifier = identifier;
             Expression = expression;
-            if (!Identifier.Type.CanAssign(expression.Type))
+            if (!new ImplicitConverter().CanConvertImplicitly(expression.Type, Identifier.Type))
             {
                 ParserCS.ReportError($"Cannot assign {expression.Type.TypeName} to {identifier.Type.TypeName}");
             }
@@ -783,7 +1018,8 @@ namespace Mini_Compiler
         public string GenCode()
         {
             var rightRegister = Expression.GenCode();
-            Emiter.EmitCode($"store {Identifier.Type.LLVMName} {rightRegister}, {Identifier.Type.LLVMName}* %{Identifier.Name}");
+            var rightRegisterTyped = new Converter().Convert(Expression.Type, Identifier.Type, rightRegister);
+            Emiter.EmitCode($"store {Identifier.Type.LLVMName} {rightRegisterTyped}, {Identifier.Type.LLVMName}* %{Identifier.Name}");
             var leftRegister = ParserCS.GetUniqeRegister();
             Emiter.EmitCode($"{leftRegister} = load {Identifier.Type.LLVMName}, {Identifier.Type.LLVMName}* %{Identifier.Name}");
             return leftRegister;
@@ -795,7 +1031,7 @@ namespace Mini_Compiler
 
     #region IF
 
-    public class IfInstruction : InstructionNode, ITypeVisitor
+    public class IfInstruction : InstructionNode, ITypeVisitor<bool>
     {
         public IfInstruction(IExpression condition, InstructionNode instruction, InstructionNode elseInstruction = null)
         {
@@ -812,32 +1048,36 @@ namespace Mini_Compiler
         public InstructionNode Instruction { get; }
         public InstructionNode ElseInstruction { get; }
 
-        public bool Can(IntType type) => false;
+        public bool Visit(IntType type) => false;
 
-        public bool Can(DoubleType type) => false;
+        public bool Visit(DoubleType type) => false;
 
-        public bool Can(BoolType type) => true;
+        public bool Visit(BoolType type) => true;
 
         public override string GenCode()
         {
-            var condRegister = Condition.GenCode();
+            var labelThen = ParserCS.GetUniqeLabel();
+            var labelEnd = ParserCS.GetUniqeLabel();
+            var lExpReg = Condition.GenCode();
             if (ElseInstruction == null)
             {
-                Console.WriteLine($"If({condRegister}) jak nie to skok na koniec");
+                Emiter.EmitCode($"br i1 {lExpReg}, label %{labelThen}, label %{labelEnd}");
+                Emiter.EmitCode(labelThen + ":");
+                Instruction.GenCode();
+                Emiter.EmitCode($"br label %{labelEnd}");
+                Emiter.EmitCode(labelEnd + ":");
             }
             else
             {
-                Console.WriteLine($"If({condRegister}) jak nie to skok do elsa");
-            }
-            Instruction.GenCode();
-            if (ElseInstruction == null)
-            {
-                Console.WriteLine("Etykieta końcowa ");
-            }
-            else
-            {
-                Console.WriteLine("Etykieta do elsa ");
+                var labelElse = ParserCS.GetUniqeLabel();
+                Emiter.EmitCode($"br i1 {lExpReg}, label %{labelThen}, label %{labelElse}");
+                Emiter.EmitCode(labelThen + ":");
+                Instruction.GenCode();
+                Emiter.EmitCode($"br label %{labelEnd}");
+                Emiter.EmitCode(labelElse + ":");
                 ElseInstruction.GenCode();
+                Emiter.EmitCode($"br label %{labelEnd}");
+                Emiter.EmitCode(labelEnd + ":");
             }
 
             return null;
@@ -850,7 +1090,7 @@ namespace Mini_Compiler
 
 
     #region While
-    public class WhileInstruction : InstructionNode, ITypeVisitor
+    public class WhileInstruction : InstructionNode, ITypeVisitor<bool>
     {
         public WhileInstruction(IExpression condition, InstructionNode instruction)
         {
@@ -865,23 +1105,31 @@ namespace Mini_Compiler
         public IExpression Condition { get; }
         public InstructionNode Instruction { get; }
 
-        public bool Can(IntType type) => false;
+        public bool Visit(IntType type) => false;
 
-        public bool Can(DoubleType type) => false;
+        public bool Visit(DoubleType type) => false;
 
-        public bool Can(BoolType type) => true;
+        public bool Visit(BoolType type) => true;
 
         public override string GenCode()
         {
-            Console.WriteLine("Etykieta start");
-            var condRegister = Condition.GenCode();
-            Console.WriteLine($"If({condRegister} == flase) skok do etykiety końcowej");
+            var labelStart = ParserCS.GetUniqeLabel();
+            var labelThen = ParserCS.GetUniqeLabel();
+            var labelEnd = ParserCS.GetUniqeLabel();
+
+            Emiter.EmitCode($"br label %{labelStart}");
+            Emiter.EmitCode(labelStart + ":");
+            var lExpReg = Condition.GenCode();
+            Emiter.EmitCode($"br i1 {lExpReg}, label %{labelThen}, label %{labelEnd}");
+            Emiter.EmitCode(labelThen + ":");
             Instruction.GenCode();
-            Console.WriteLine("Skok do etykiety początkowej ");
-            Console.WriteLine("Etykieta końcowa ");
+            Emiter.EmitCode($"br label %{labelStart}");
+            Emiter.EmitCode(labelEnd + ":");
+
 
 
             return null;
+
         }
     }
 
@@ -891,12 +1139,12 @@ namespace Mini_Compiler
 
     #region Read
 
-    public class ReadInstruction : InstructionNode,ITypeVisitor
+    public class ReadInstruction : InstructionNode, ITypeVisitor<bool>, IVoidTypeVisitor
     {
         public ReadInstruction(Identifier identifier)
         {
             Identifier = identifier;
-            if(!identifier.Type.Accept(this))
+            if (!identifier.Type.Accept(this))
             {
                 ParserCS.ReportError("Read instruction expects int or bool identifier");
             }
@@ -904,21 +1152,38 @@ namespace Mini_Compiler
 
         public Identifier Identifier { get; }
 
-        public bool Can(IntType type) => true;
+        public bool Visit(IntType type) => true;
 
-        public bool Can(DoubleType type) => true;
+        public bool Visit(DoubleType type) => true;
 
-        public bool Can(BoolType type) => false;
+        public bool Visit(BoolType type) => false;
 
         public override string GenCode()
         {
-            Console.WriteLine($"Read to {Identifier.Name}");
+            Identifier.Type.AcceptVoid(this);
 
             return null;
         }
+
+        void IVoidTypeVisitor.Visit(IntType type)
+        {
+           // var reg = Identifier.GenCode();
+            Emiter.EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([3 x i8]* @int_res to i8*), i32* %{Identifier.Name})");
+        }
+
+        void IVoidTypeVisitor.Visit(DoubleType type)
+        {
+            Emiter.EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([4 x i8]* @double_res to i8*), double* %{Identifier.Name})");
+
+        }
+
+        void IVoidTypeVisitor.Visit(BoolType type)
+        {
+            throw new NotImplementedException();
+        }
     }
 
-    public class ReadHexInstruction : InstructionNode,ITypeVisitor
+    public class ReadHexInstruction : InstructionNode, ITypeVisitor<bool>
     {
         public ReadHexInstruction(Identifier identifier)
         {
@@ -930,87 +1195,147 @@ namespace Mini_Compiler
         }
 
         public Identifier Identifier { get; }
-        public bool Can(IntType type) => true;
+        public bool Visit(IntType type) => true;
 
-        public bool Can(DoubleType type) => false;
+        public bool Visit(DoubleType type) => false;
 
-        public bool Can(BoolType type) => false;
+        public bool Visit(BoolType type) => false;
         public override string GenCode()
         {
-            Console.WriteLine($"Read HEX to {Identifier.Name}");
-
+            Emiter.EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([5 x i8]* @hex_res to i8*), i32* %{Identifier.Name})");
             return null;
         }
+
+       
     }
     #endregion Read
 
     #region Write
 
-    public class WriteInstruction : InstructionNode, ITypeVisitor
+    public class WriteInstruction : InstructionNode, ITypeVisitor<bool>, IVoidTypeVisitor
     {
-        public WriteInstruction(Identifier identifier)
+        public IExpression Expression { get; }
+
+        public WriteInstruction(IExpression expression)
         {
-            Identifier = identifier;
-            if (!identifier.Type.Accept(this))
+            if (!expression.Type.Accept<bool>(this))
             {
                 ParserCS.ReportError("Write instruction expects int, double or bool identifier");
             }
+            Expression = expression;
         }
 
-        public Identifier Identifier { get; }
 
-        public bool Can(IntType type) => true;
+        public bool Visit(IntType type) => true;
 
-        public bool Can(DoubleType type) => true;
+        public bool Visit(DoubleType type) => true;
 
-        public bool Can(BoolType type) => true;
+        public bool Visit(BoolType type) => true;
 
         public override string GenCode()
         {
-            Console.WriteLine($"Write {Identifier.Name}");
-
+            Expression.Type.AcceptVoid(this);
             return null;
+        }
+
+
+        void IVoidTypeVisitor.Visit(IntType type)
+        {
+            var reg = Expression.GenCode();
+            Emiter.EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([3 x i8]* @int_res to i8*), i32 {reg})");
+        }
+
+        void IVoidTypeVisitor.Visit(DoubleType type)
+        {
+            var reg = Expression.GenCode();
+            Emiter.EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([4 x i8]* @double_res to i8*), double {reg})");
+        }
+
+        void IVoidTypeVisitor.Visit(BoolType type)
+        {
+            var labelTrue = ParserCS.GetUniqeLabel();
+            var labelFalse = ParserCS.GetUniqeLabel();
+            var labelEnd = ParserCS.GetUniqeLabel();
+            var reg = Expression.GenCode();
+            Emiter.EmitCode($"br i1 {reg}, label %{labelTrue}, label %{labelFalse}");
+
+            Emiter.EmitCode($"{labelTrue}:");
+            Emiter.EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([5 x i8]* @true_res to i8*))");
+            Emiter.EmitCode($"br label %{labelEnd}");
+
+            Emiter.EmitCode($"{labelFalse}:");
+            Emiter.EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([6 x i8]* @false_res to i8*))");
+            Emiter.EmitCode($"br label %{labelEnd}");
+
+            Emiter.EmitCode($"{labelEnd}:");
         }
     }
 
-    public class WriteHexInstruction : InstructionNode, ITypeVisitor
+    public class WriteHexInstruction : InstructionNode, ITypeVisitor<bool>
     {
-        public WriteHexInstruction(Identifier identifier)
+        public WriteHexInstruction(IExpression expression)
         {
-            Identifier = identifier;
-            if (!identifier.Type.Accept(this))
+            Expression = expression;
+            if (!expression.Type.Accept(this))
             {
                 ParserCS.ReportError("Write HEX instruction expects int identifier");
             }
         }
 
-        public Identifier Identifier { get; }
-        public bool Can(IntType type) => true;
+        public IExpression Expression { get; }
+        public bool Visit(IntType type) => true;
 
-        public bool Can(DoubleType type) => false;
+        public bool Visit(DoubleType type) => false;
 
-        public bool Can(BoolType type) => false;
+        public bool Visit(BoolType type) => false;
         public override string GenCode()
         {
-            Console.WriteLine($"Write HEX {Identifier.Name}");
+            var reg = Expression.GenCode();
+            Emiter.EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([5 x i8]* @hex_res to i8*), i32 {reg})");
 
             return null;
         }
     }
 
+    public class StringLex
+    {
+        static int count = 0;
+        public StringLex(string s)
+        {
+            s = s.Substring(1, s.Length - 2);
+            s = s.Replace("\\", "\\\\");
+            s = s.Replace("\\\\n", "\n");
+            s = s.Replace("\\\\\"", "\\22");
+            s = s.Replace("\\\\\\\\", "\\5C");
+            s = s.Replace("\\\\", "");
+            S = s;
+            ConstName = "str" + (++count).ToString();
+            ParserCS.strings.Add(this);
+        }
+        public int LexLength
+        {
+            get
+            {
+                int slashesCount = S.Count(c => c == '\\');
+                return S.Length + 1 - slashesCount * 2;
+            }
+        }
+        public string S { get; }
+        public string ConstName { get; }
+    }
+
     public class WriteStringInstruction : InstructionNode
     {
-        public WriteStringInstruction(string s)
+        public WriteStringInstruction(StringLex s)
         {
             S = s;
         }
 
-        public Identifier Identifier { get; }
-        public string S { get; }
-      
+        public StringLex S { get; }
+
         public override string GenCode()
         {
-            Console.WriteLine($"Write {S}");
+            Emiter.EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([{S.LexLength} x i8]* @{S.ConstName} to i8*))");
 
             return null;
         }
@@ -1022,18 +1347,29 @@ namespace Mini_Compiler
         public static void EmitProlog()
         {
             EmitCode("; prolog");
+            EmitCode("@int_res = constant [3 x i8] c\"%d\\00\"");
+            EmitCode("@double_res = constant [4 x i8] c\"%lf\\00\"");
+            EmitCode("@hex_res = constant [5 x i8] c\"0X%X\\00\"");
+            EmitCode("@true_res = constant [5 x i8] c\"True\\00\"");
+            EmitCode("@false_res = constant [6 x i8] c\"False\\00\"");
+            foreach (var s in ParserCS.strings)
+            {
+                EmitCode($"@{s.ConstName} = constant[{s.LexLength} x i8] c\"{s.S}\\00\"");
+            }
+            EmitCode("declare i32 @printf(i8* noalias nocapture, ...)");
+            EmitCode("declare i32 @scanf(i8* noalias nocapture, ...)");
             EmitCode("define i32 @main()");
             EmitCode("{");
         }
         public static void EmitEpilog()
         {
-            EmitCode("ret i32 0"); 
+            EmitCode("ret i32 0");
             EmitCode("}");
         }
-        public static StreamWriter sw { get; set; }
+        public static StreamWriter SW { get; set; }
         public static void EmitCode(string code)
         {
-            sw.WriteLine(code);
+            SW.WriteLine(code);
         }
     }
 
@@ -1091,7 +1427,7 @@ namespace Mini_Compiler
             {
                 try
                 {
-                    Emiter.sw = new StreamWriter(fileName + ".ll");
+                    Emiter.SW = new StreamWriter(fileName + ".ll");
                 }
                 catch (Exception)
                 {
@@ -1100,7 +1436,7 @@ namespace Mini_Compiler
                 Emiter.EmitProlog();
                 parser.RootNode.GenCode();
                 Emiter.EmitEpilog();
-                Emiter.sw.Close();
+                Emiter.SW.Close();
                 Console.WriteLine("Compiled.");
                 return 0;
             }

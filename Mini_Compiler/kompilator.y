@@ -29,6 +29,7 @@
     public IExpression expression;
     public IType type;
     public Identifier identifier;
+    public StringLex stringLex;
 }
 
 %token  Program If Else While String DoubleType IntType Read Write Return BoolType True False Hex 
@@ -47,6 +48,7 @@
 %type <instruction> instruction blockInstruction expressionInstruction ifInstruction whileInstruction readInstruction writeInstruction returnInstruction
 %type <expression> expression constantExpression unaryExpression binaryExpression
 %type <identifier> identifier 
+%type <stringLex> string 
 
 %right Assign
 %left And Or
@@ -73,8 +75,7 @@ declarations    : declarations declaration { $$ = $1; $$.Add($2); }
 
 declaration     : type identifiers Semicolon 
                 { 
-                    $$ = new DeclarationNode($1,$2); 
-                    parser.MakeDeclaration($1,$2);
+                    $$ = parser.MakeDeclaration($1,$2);
                 }
                 ;
 
@@ -162,9 +163,11 @@ readInstruction : Read identifier Semicolon { $$ = new ReadInstruction($2); }
                 | Read identifier Comma Hex Semicolon { $$ = new ReadHexInstruction($2); }
                 ;
                 
-writeInstruction: Write identifier Semicolon { $$ = new WriteInstruction($2); }
-                | Write identifier Comma Hex Semicolon { $$ = new WriteHexInstruction($2); }
-                | Write String Semicolon { $$ = new WriteStringInstruction($2); }
+writeInstruction: Write expression Semicolon { $$ = new WriteInstruction($2); }
+                | Write expression Comma Hex Semicolon { $$ = new WriteHexInstruction($2); }
+                | Write string Semicolon { $$ = new WriteStringInstruction($2); }
+                ;
+string          : String {$$ = new StringLex($1);}
                 ;
 
 returnInstruction   : Return Semicolon { $$ = new ReturnInstruction(); }

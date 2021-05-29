@@ -1,0 +1,12 @@
+
+
+program
+{
+int i;
+read i,hex;
+write i;
+write "\n";
+write i,hex;
+write "\n";
+
+}

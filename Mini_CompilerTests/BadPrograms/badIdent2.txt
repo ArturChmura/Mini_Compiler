@@ -1,0 +1,4 @@
+program
+{
+  int 2i;
+}

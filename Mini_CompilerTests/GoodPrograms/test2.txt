@@ -71,10 +71,9 @@ program
 
 	if(b)if(b == false){i = 3;} else {i = 4;}
 
-	while(b)if(b == false){i = 3;} else {i = 4;}
+	b = true;
+	while(b)if(b == false){i = 3;} else {i = 4; b = false;}
 
-	read d;
-	read i, hex;
 
 	write i;
 	write d;

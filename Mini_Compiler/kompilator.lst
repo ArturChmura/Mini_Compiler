@@ -1,18 +1,16 @@
 
 // ==========================================================================
-//  GPPG error listing for yacc source file <.\kompilator.y - 26.05.2021 14:31:28>
+//  GPPG error listing for yacc source file <.\kompilator.y - 28.05.2021 02:01:21>
 // ==========================================================================
 //  Version:  1.5.2
 //  Machine:  DESKTOP-UEML2C3
-//  DateTime: 26.05.2021 14:31:29
+//  DateTime: 28.05.2021 02:01:31
 //  UserName: Artur
 // ==========================================================================
 
 
 %namespace Mini_Compiler
-
 %output=Parser.cs
-
 
 %{
     private ParserCS parser;
@@ -42,6 +40,7 @@
     public IExpression expression;
     public IType type;
     public Identifier identifier;
+    public StringLex stringLex;
 }
 
 %token  Program If Else While String DoubleType IntType Read Write Return BoolType True False Hex 
@@ -57,9 +56,10 @@
 %type <strings> identifiers identifiersComma
 %type <type> type 
 %type <instructions> instructions
-%type <instruction> instruction block expressionInstruction ifInstruction whileInstruction readInstruction writeInstruction returnInstruction
+%type <instruction> instruction blockInstruction expressionInstruction ifInstruction whileInstruction readInstruction writeInstruction returnInstruction
 %type <expression> expression constantExpression unaryExpression binaryExpression
 %type <identifier> identifier 
+%type <stringLex> string 
 
 %right Assign
 %left And Or
@@ -74,10 +74,10 @@
 
 %%
 
-start           : Program block { RootNode  = $2; }
+start           : Program blockInstruction { RootNode  = $2; }
                 ;
 
-block           : OpenBracket declarations instructions CloseBracket   { $$  = new BlockInstructionNode($2, $3); }
+blockInstruction: OpenBracket declarations instructions CloseBracket   { $$  = new BlockInstructionNode($2, $3); }
                 ;
 
 declarations    : declarations declaration { $$ = $1; $$.Add($2); }
@@ -86,9 +86,13 @@ declarations    : declarations declaration { $$ = $1; $$.Add($2); }
 
 declaration     : type identifiers Semicolon 
                 { 
-                    $$ = new DeclarationNode($1,$2); 
-                    parser.MakeDeclaration($1,$2);
+                    $$ = parser.MakeDeclaration($1,$2);
                 }
+                ;
+
+type            : IntType { $$ = new IntType(); }
+                | DoubleType { $$ = new DoubleType(); }
+                | BoolType { $$ = new BoolType(); }
                 ;
 
 identifiers     : identifiersComma Identifier { $$ = $1; $$.Add($2); }
@@ -97,22 +101,20 @@ identifiers     : identifiersComma Identifier { $$ = $1; $$.Add($2); }
 identifiersComma: identifiersComma Identifier Comma  { $$ = $1; $$.Add($2); }
                 | { $$ = new List<string>(); }
                 ;
-
-type            : IntType { $$ = new IntType(); }
-                | DoubleType { $$ = new DoubleType(); }
-                | BoolType { $$ = new BoolType(); }
+                
+identifier      : Identifier { $$ = parser.GetIdentifier($1); }
                 ;
 
 instructions    : instructions instruction { $$ = $1; $$.Add($2); }
                 | { $$ = new List<InstructionNode>(); }
                 ;
 
-instruction     : block { $$ = $1; }
+instruction     : blockInstruction { $$ = $1; }
                 | expressionInstruction { $$ = $1; }
                 | ifInstruction { $$ = $1; }
                 | whileInstruction { $$ = $1; }
                 | readInstruction { $$ = $1; }
-                | writeInstruction { $$ = $1; 
+                | writeInstruction { $$ = $1; }
                 | returnInstruction { $$ = $1; }
                 ;
 
@@ -133,7 +135,7 @@ unaryExpression : Minus expression { $$ = new UnaryMinusExpression($2);  }
                 | DoubleParse expression { $$ = new DoubleConversionExpression($2);  }
                 ;
 
-binaryExpression  : expression BitOr expression { $$ = new BitsOrExpression($1,$3);  }
+binaryExpression: expression BitOr expression { $$ = new BitsOrExpression($1,$3);  }
                 | expression BitAnd expression { $$ = new BitAndExpression($1,$3);  }
 
                 | expression Multiplies expression { $$ = new Multiplication($1,$3);  }
@@ -172,15 +174,15 @@ readInstruction : Read identifier Semicolon { $$ = new ReadInstruction($2); }
                 | Read identifier Comma Hex Semicolon { $$ = new ReadHexInstruction($2); }
                 ;
                 
-writeInstruction : Write identifier Semicolon { $$ = new WriteInstruction($2); }
-                | Write identifier Comma Hex Semicolon { $$ = new WriteHexInstruction($2); }
-                | Write String Semicolon { $$ = new WriteStringInstruction($2); }
+writeInstruction: Write expression Semicolon { $$ = new WriteInstruction($2); }
+                | Write expression Comma Hex Semicolon { $$ = new WriteHexInstruction($2); }
+                | Write string Semicolon { $$ = new WriteStringInstruction($2); }
                 ;
+string          : String {$$ = new StringLex($1);}
 
-
-identifier      : Identifier { $$ = parser.GetIdentifier($1); }
-                ;//------------^
-// Error: Syntax error, unexpected EOF, expecting '}', or error
-// ------------------------------------------------------------
-// ==========================================================================
+returnInstruction   : Return Semicolon { $$ = new ReturnInstruction(); }
+//^^^^^^^^^^^^^^^
+// Error: Syntax error, unexpected anchoredSymbol
+// ----------------------------------------------
+                ;// ==========================================================================
 

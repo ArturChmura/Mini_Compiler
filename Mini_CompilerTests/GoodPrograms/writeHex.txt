@@ -1,0 +1,12 @@
+
+program
+{
+int i;
+double d;
+bool b;
+
+i=11;
+write i,hex;
+write "\n";
+
+}

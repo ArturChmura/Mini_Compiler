@@ -1,0 +1,37 @@
+
+program
+{
+int i;
+double d;
+bool b;
+
+i=152;
+d=312.3123;
+b=true;
+
+write "\n";
+write i;
+write "\n";
+write d;
+write "\n";
+write b;
+write "\n";
+b = false;
+write b;
+write "\n";
+write 12;
+write "\n";
+
+write "chuj";
+write "\n";
+write "jebac dissa";
+
+write "\n";
+write " cudzyslow \" cudzyslow";
+write " \n";
+write " backslash \\ backslash";
+write " \n";
+write " ingo\row\ane sla\she";
+write " \n";
+
+}

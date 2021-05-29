@@ -1,0 +1,6 @@
+program
+{
+ bool b;
+ double d;
+ b = d =d =d =d;
+}

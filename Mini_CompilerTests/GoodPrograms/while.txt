@@ -1,0 +1,12 @@
+
+program
+{
+
+bool b1;
+b1 = true;
+while(b1)
+{
+b1=false;
+}
+
+}

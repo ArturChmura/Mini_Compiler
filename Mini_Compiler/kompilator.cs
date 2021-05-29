@@ -6,9 +6,9 @@
 //
 //  GPLEX Version:  1.2.2
 //  Machine:  DESKTOP-UEML2C3
-//  DateTime: 26.05.2021 21:21:28
+//  DateTime: 28.05.2021 02:03:18
 //  UserName: Artur
-//  GPLEX input file <.\kompilator.lex - 26.05.2021 21:15:05>
+//  GPLEX input file <.\kompilator.lex - 28.05.2021 02:02:05>
 //  GPLEX frame file <embedded resource>
 //
 //  Option settings: parser, minimize

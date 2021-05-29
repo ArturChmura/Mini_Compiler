@@ -1,0 +1,9 @@
+program
+{
+int i;
+  if
+  {
+	i = 3;
+  }
+
+}

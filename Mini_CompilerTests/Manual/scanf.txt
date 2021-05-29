@@ -1,0 +1,12 @@
+program
+{
+int i;
+double d;
+read i;
+write i;
+write "\n";
+read d;
+write d;
+write "\n";
+
+}

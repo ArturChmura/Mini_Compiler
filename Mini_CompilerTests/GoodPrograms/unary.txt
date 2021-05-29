@@ -1,0 +1,21 @@
+program
+{
+   int i;
+   double d;
+   bool b;
+   i = 1;
+   i = -i;
+
+   d = 1;
+   d = -d;
+
+   i = ~i;
+   b=!b;
+
+   i = (int)2.6;
+   i = (int)1;
+   i = (int)true;
+
+   d = (double)1;
+   d = (double)1.0;
+}
