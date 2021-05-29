@@ -6,9 +6,9 @@
 //
 //  GPLEX Version:  1.2.2
 //  Machine:  DESKTOP-UEML2C3
-//  DateTime: 28.05.2021 02:03:18
+//  DateTime: 29.05.2021 20:56:43
 //  UserName: Artur
-//  GPLEX input file <.\kompilator.lex - 28.05.2021 02:02:05>
+//  GPLEX input file <.\kompilator.lex - 29.05.2021 19:58:37>
 //  GPLEX frame file <embedded resource>
 //
 //  Option settings: parser, minimize
@@ -134,7 +134,8 @@ namespace Mini_Compiler
 #region user code
 public int LineNumber { get; private set; } = 1;
 
-	public int ErrorsCount { get; private set; }
+	public int ErrorsCount { get; private set; } = 0;
+
 	public override void yyerror(string msg, params object[] args)
 	{
 		ErrorsCount++;

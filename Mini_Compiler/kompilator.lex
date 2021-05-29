@@ -11,7 +11,8 @@ String			\"(\\.|[^"\n])*\"
 %{
 	public int LineNumber { get; private set; } = 1;
 
-	public int ErrorsCount { get; private set; }
+	public int ErrorsCount { get; private set; } = 0;
+
 	public override void yyerror(string msg, params object[] args)
 	{
 		ErrorsCount++;

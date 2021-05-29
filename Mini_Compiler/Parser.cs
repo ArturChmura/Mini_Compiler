@@ -4,9 +4,9 @@
 
 // GPPG version 1.5.2
 // Machine:  DESKTOP-UEML2C3
-// DateTime: 28.05.2021 02:01:46
+// DateTime: 29.05.2021 20:56:59
 // UserName: Artur
-// Input file <.\kompilator.y - 28.05.2021 02:01:45>
+// Input file <.\kompilator.y - 29.05.2021 20:56:07>
 
 // options: lines gplex
 
@@ -70,19 +70,19 @@ public class ScanObj {
 [GeneratedCodeAttribute( "Gardens Point Parser Generator", "1.5.2")]
 public class Parser: ShiftReduceParser<ValueType, LexLocation>
 {
-  // Verbatim content from .\kompilator.y - 28.05.2021 02:01:45
+  // Verbatim content from .\kompilator.y - 29.05.2021 20:56:07
 #line 5 ".\kompilator.y"
-    private ParserCS parser;
     public int ErrorsCount { get => ParserCS.ErrorsCount; }
+
+    public INode RootNode { get; private set; }
 
     public Parser(Scanner scanner) : base(scanner) { 
         this.parser = new ParserCS(scanner);
     }
 
-    public INode RootNode { get; private set; }
-    
+    private ParserCS parser;
 #line default
-  // End verbatim content from .\kompilator.y - 28.05.2021 02:01:45
+  // End verbatim content from .\kompilator.y - 29.05.2021 20:56:07
 
 #pragma warning disable 649
   private static Dictionary<int, string> aliases;
@@ -287,311 +287,311 @@ public class Parser: ShiftReduceParser<ValueType, LexLocation>
     switch (action)
     {
       case 2: // start -> Program, blockInstruction
-#line 66 ".\kompilator.y"
-                                           { RootNode  = ValueStack[ValueStack.Depth-1].instruction; }
+#line 65 ".\kompilator.y"
+                                               { RootNode  = ValueStack[ValueStack.Depth-1].instruction; }
 #line default
         break;
       case 3: // blockInstruction -> OpenBracket, declarations, instructions, CloseBracket
-#line 69 ".\kompilator.y"
-                                                                       { CurrentSemanticValue.instruction  = new BlockInstructionNode(ValueStack[ValueStack.Depth-3].declarations, ValueStack[ValueStack.Depth-2].instructions); }
+#line 68 ".\kompilator.y"
+                                                                          { CurrentSemanticValue.instruction  = new BlockInstructionNode(ValueStack[ValueStack.Depth-3].declarations, ValueStack[ValueStack.Depth-2].instructions); }
 #line default
         break;
       case 4: // declarations -> declarations, declaration
-#line 72 ".\kompilator.y"
-                                           { CurrentSemanticValue.declarations = ValueStack[ValueStack.Depth-2].declarations; CurrentSemanticValue.declarations.Add(ValueStack[ValueStack.Depth-1].declaration); }
+#line 71 ".\kompilator.y"
+                                               { CurrentSemanticValue.declarations = ValueStack[ValueStack.Depth-2].declarations; CurrentSemanticValue.declarations.Add(ValueStack[ValueStack.Depth-1].declaration); }
 #line default
         break;
       case 5: // declarations -> /* empty */
-#line 73 ".\kompilator.y"
-                  { CurrentSemanticValue.declarations = new List<DeclarationNode>(); }
+#line 72 ".\kompilator.y"
+                      { CurrentSemanticValue.declarations = new List<DeclarationNode>(); }
 #line default
         break;
       case 6: // declaration -> type, identifiers, Semicolon
-#line 77 ".\kompilator.y"
-                { 
-                    CurrentSemanticValue.declaration = parser.MakeDeclaration(ValueStack[ValueStack.Depth-3].type,ValueStack[ValueStack.Depth-2].strings);
-                }
+#line 76 ".\kompilator.y"
+                    { 
+                        CurrentSemanticValue.declaration = parser.MakeDeclaration(ValueStack[ValueStack.Depth-3].type,ValueStack[ValueStack.Depth-2].strings);
+                    }
 #line default
         break;
       case 7: // type -> IntType
-#line 82 ".\kompilator.y"
-                          { CurrentSemanticValue.type = new IntType(); }
+#line 81 ".\kompilator.y"
+                              { CurrentSemanticValue.type = IntType.Get; }
 #line default
         break;
       case 8: // type -> DoubleType
-#line 83 ".\kompilator.y"
-                             { CurrentSemanticValue.type = new DoubleType(); }
+#line 82 ".\kompilator.y"
+                                 { CurrentSemanticValue.type = DoubleType.Get; }
 #line default
         break;
       case 9: // type -> BoolType
-#line 84 ".\kompilator.y"
-                           { CurrentSemanticValue.type = new BoolType(); }
+#line 83 ".\kompilator.y"
+                               { CurrentSemanticValue.type = BoolType.Get; }
 #line default
         break;
       case 10: // identifiers -> identifiersComma, Identifier
-#line 87 ".\kompilator.y"
-                                              { CurrentSemanticValue.strings = ValueStack[ValueStack.Depth-2].strings; CurrentSemanticValue.strings.Add(ValueStack[ValueStack.Depth-1].str); }
+#line 86 ".\kompilator.y"
+                                                  { CurrentSemanticValue.strings = ValueStack[ValueStack.Depth-2].strings; CurrentSemanticValue.strings.Add(ValueStack[ValueStack.Depth-1].str); }
 #line default
         break;
       case 11: // identifiersComma -> identifiersComma, Identifier, Comma
-#line 90 ".\kompilator.y"
-                                                     { CurrentSemanticValue.strings = ValueStack[ValueStack.Depth-3].strings; CurrentSemanticValue.strings.Add(ValueStack[ValueStack.Depth-2].str); }
+#line 89 ".\kompilator.y"
+                                                         { CurrentSemanticValue.strings = ValueStack[ValueStack.Depth-3].strings; CurrentSemanticValue.strings.Add(ValueStack[ValueStack.Depth-2].str); }
 #line default
         break;
       case 12: // identifiersComma -> /* empty */
-#line 91 ".\kompilator.y"
-                  { CurrentSemanticValue.strings = new List<string>(); }
+#line 90 ".\kompilator.y"
+                      { CurrentSemanticValue.strings = new List<string>(); }
 #line default
         break;
       case 13: // identifier -> Identifier
-#line 94 ".\kompilator.y"
-                             { CurrentSemanticValue.identifier = parser.GetIdentifier(ValueStack[ValueStack.Depth-1].str); }
+#line 93 ".\kompilator.y"
+                                 { CurrentSemanticValue.identifier = parser.GetIdentifier(ValueStack[ValueStack.Depth-1].str); }
 #line default
         break;
       case 14: // instructions -> instructions, instruction
-#line 97 ".\kompilator.y"
-                                           { CurrentSemanticValue.instructions = ValueStack[ValueStack.Depth-2].instructions; CurrentSemanticValue.instructions.Add(ValueStack[ValueStack.Depth-1].instruction); }
+#line 96 ".\kompilator.y"
+                                               { CurrentSemanticValue.instructions = ValueStack[ValueStack.Depth-2].instructions; CurrentSemanticValue.instructions.Add(ValueStack[ValueStack.Depth-1].instruction); }
 #line default
         break;
       case 15: // instructions -> /* empty */
-#line 98 ".\kompilator.y"
-                  { CurrentSemanticValue.instructions = new List<InstructionNode>(); }
+#line 97 ".\kompilator.y"
+                      { CurrentSemanticValue.instructions = new List<InstructionNode>(); }
 #line default
         break;
       case 16: // instruction -> blockInstruction
-#line 101 ".\kompilator.y"
-                                   { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
+#line 100 ".\kompilator.y"
+                                       { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
 #line default
         break;
       case 17: // instruction -> expressionInstruction
-#line 102 ".\kompilator.y"
-                                        { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
+#line 101 ".\kompilator.y"
+                                            { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
 #line default
         break;
       case 18: // instruction -> ifInstruction
-#line 103 ".\kompilator.y"
-                                { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
-#line default
-        break;
-      case 19: // instruction -> whileInstruction
-#line 104 ".\kompilator.y"
-                                   { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
-#line default
-        break;
-      case 20: // instruction -> readInstruction
-#line 105 ".\kompilator.y"
-                                  { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
-#line default
-        break;
-      case 21: // instruction -> writeInstruction
-#line 106 ".\kompilator.y"
-                                   { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
-#line default
-        break;
-      case 22: // instruction -> returnInstruction
-#line 107 ".\kompilator.y"
+#line 102 ".\kompilator.y"
                                     { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
 #line default
         break;
+      case 19: // instruction -> whileInstruction
+#line 103 ".\kompilator.y"
+                                       { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
+#line default
+        break;
+      case 20: // instruction -> readInstruction
+#line 104 ".\kompilator.y"
+                                      { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
+#line default
+        break;
+      case 21: // instruction -> writeInstruction
+#line 105 ".\kompilator.y"
+                                       { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
+#line default
+        break;
+      case 22: // instruction -> returnInstruction
+#line 106 ".\kompilator.y"
+                                        { CurrentSemanticValue.instruction = ValueStack[ValueStack.Depth-1].instruction; }
+#line default
+        break;
       case 23: // expressionInstruction -> expression, Semicolon
-#line 110 ".\kompilator.y"
-                                               { CurrentSemanticValue.instruction = new ExpressionInstructionNode(ValueStack[ValueStack.Depth-2].expression); }
+#line 109 ".\kompilator.y"
+                                            { CurrentSemanticValue.instruction = new ExpressionInstructionNode(ValueStack[ValueStack.Depth-2].expression); }
 #line default
         break;
       case 24: // expression -> unaryExpression
-#line 113 ".\kompilator.y"
-                                  { CurrentSemanticValue.expression = ValueStack[ValueStack.Depth-1].expression; }
+#line 112 ".\kompilator.y"
+                                      { CurrentSemanticValue.expression = ValueStack[ValueStack.Depth-1].expression; }
 #line default
         break;
       case 25: // expression -> binaryExpression
-#line 114 ".\kompilator.y"
-                                   { CurrentSemanticValue.expression = ValueStack[ValueStack.Depth-1].expression; }
+#line 113 ".\kompilator.y"
+                                       { CurrentSemanticValue.expression = ValueStack[ValueStack.Depth-1].expression; }
 #line default
         break;
       case 26: // expression -> identifier
-#line 115 ".\kompilator.y"
-                             { CurrentSemanticValue.expression = ValueStack[ValueStack.Depth-1].identifier; }
+#line 114 ".\kompilator.y"
+                                 { CurrentSemanticValue.expression = ValueStack[ValueStack.Depth-1].identifier; }
 #line default
         break;
       case 27: // expression -> constantExpression
-#line 116 ".\kompilator.y"
-                                     { CurrentSemanticValue.expression = ValueStack[ValueStack.Depth-1].expression; }
+#line 115 ".\kompilator.y"
+                                         { CurrentSemanticValue.expression = ValueStack[ValueStack.Depth-1].expression; }
 #line default
         break;
       case 28: // expression -> OpenParenthesis, expression, CloseParenthesis
-#line 117 ".\kompilator.y"
-                                                              { CurrentSemanticValue.expression = ValueStack[ValueStack.Depth-2].expression; }
+#line 116 ".\kompilator.y"
+                                                                  { CurrentSemanticValue.expression = ValueStack[ValueStack.Depth-2].expression; }
 #line default
         break;
       case 29: // unaryExpression -> Minus, expression
-#line 120 ".\kompilator.y"
-                                   { CurrentSemanticValue.expression = new UnaryMinusExpression(ValueStack[ValueStack.Depth-1].expression);  }
+#line 119 ".\kompilator.y"
+                                       { CurrentSemanticValue.expression = new UnaryMinusExpression(ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 30: // unaryExpression -> Tilde, expression
-#line 121 ".\kompilator.y"
-                                   { CurrentSemanticValue.expression = new BitNegationExpression(ValueStack[ValueStack.Depth-1].expression);  }
+#line 120 ".\kompilator.y"
+                                       { CurrentSemanticValue.expression = new BitNegationExpression(ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 31: // unaryExpression -> Exclamation, expression
-#line 122 ".\kompilator.y"
-                                         { CurrentSemanticValue.expression = new LogicNegationExpression(ValueStack[ValueStack.Depth-1].expression);  }
+#line 121 ".\kompilator.y"
+                                             { CurrentSemanticValue.expression = new LogicNegationExpression(ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 32: // unaryExpression -> IntParse, expression
-#line 123 ".\kompilator.y"
-                                      { CurrentSemanticValue.expression = new IntConversionExpression(ValueStack[ValueStack.Depth-1].expression);  }
+#line 122 ".\kompilator.y"
+                                          { CurrentSemanticValue.expression = new IntConversionExpression(ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 33: // unaryExpression -> DoubleParse, expression
-#line 124 ".\kompilator.y"
-                                         { CurrentSemanticValue.expression = new DoubleConversionExpression(ValueStack[ValueStack.Depth-1].expression);  }
+#line 123 ".\kompilator.y"
+                                             { CurrentSemanticValue.expression = new DoubleConversionExpression(ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 34: // binaryExpression -> expression, BitOr, expression
-#line 127 ".\kompilator.y"
-                                              { CurrentSemanticValue.expression = new BitsOrExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 126 ".\kompilator.y"
+                                                  { CurrentSemanticValue.expression = new BitsOrExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 35: // binaryExpression -> expression, BitAnd, expression
-#line 128 ".\kompilator.y"
-                                               { CurrentSemanticValue.expression = new BitAndExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 127 ".\kompilator.y"
+                                                   { CurrentSemanticValue.expression = new BitAndExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 36: // binaryExpression -> expression, Multiplies, expression
-#line 130 ".\kompilator.y"
-                                                   { CurrentSemanticValue.expression = new Multiplication(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 129 ".\kompilator.y"
+                                                       { CurrentSemanticValue.expression = new Multiplication(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 37: // binaryExpression -> expression, Divides, expression
-#line 131 ".\kompilator.y"
-                                                { CurrentSemanticValue.expression = new Division(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 130 ".\kompilator.y"
+                                                    { CurrentSemanticValue.expression = new Division(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 38: // binaryExpression -> expression, Plus, expression
-#line 133 ".\kompilator.y"
-                                             { CurrentSemanticValue.expression = new Sum(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 132 ".\kompilator.y"
+                                                 { CurrentSemanticValue.expression = new Sum(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 39: // binaryExpression -> expression, Minus, expression
-#line 134 ".\kompilator.y"
-                                              { CurrentSemanticValue.expression = new Subtraction(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 133 ".\kompilator.y"
+                                                  { CurrentSemanticValue.expression = new Subtraction(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 40: // binaryExpression -> expression, Equality, expression
-#line 136 ".\kompilator.y"
-                                                 { CurrentSemanticValue.expression = new EqualsExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 135 ".\kompilator.y"
+                                                     { CurrentSemanticValue.expression = new EqualsExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 41: // binaryExpression -> expression, Unequality, expression
-#line 137 ".\kompilator.y"
-                                                   { CurrentSemanticValue.expression = new NotequalsExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 136 ".\kompilator.y"
+                                                       { CurrentSemanticValue.expression = new NotequalsExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 42: // binaryExpression -> expression, Greater, expression
-#line 138 ".\kompilator.y"
-                                                { CurrentSemanticValue.expression = new GreaterExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 137 ".\kompilator.y"
+                                                    { CurrentSemanticValue.expression = new GreaterExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 43: // binaryExpression -> expression, GreaterOrEqual, expression
-#line 139 ".\kompilator.y"
-                                                       { CurrentSemanticValue.expression = new GreaterOrEqualExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 138 ".\kompilator.y"
+                                                           { CurrentSemanticValue.expression = new GreaterOrEqualExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 44: // binaryExpression -> expression, Less, expression
-#line 140 ".\kompilator.y"
-                                             { CurrentSemanticValue.expression = new LessExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 139 ".\kompilator.y"
+                                                 { CurrentSemanticValue.expression = new LessExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 45: // binaryExpression -> expression, LessOrEqual, expression
-#line 141 ".\kompilator.y"
-                                                    { CurrentSemanticValue.expression = new LessOrEqualExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 140 ".\kompilator.y"
+                                                        { CurrentSemanticValue.expression = new LessOrEqualExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 46: // binaryExpression -> expression, And, expression
-#line 143 ".\kompilator.y"
-                                            { CurrentSemanticValue.expression = new AndExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 142 ".\kompilator.y"
+                                                { CurrentSemanticValue.expression = new AndExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 47: // binaryExpression -> expression, Or, expression
-#line 144 ".\kompilator.y"
-                                           { CurrentSemanticValue.expression = new OrExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
+#line 143 ".\kompilator.y"
+                                               { CurrentSemanticValue.expression = new OrExpression(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].expression);  }
 #line default
         break;
       case 48: // binaryExpression -> identifier, Assign, expression
-#line 146 ".\kompilator.y"
-                                               { CurrentSemanticValue.expression = new AssignExpression(ValueStack[ValueStack.Depth-3].identifier,ValueStack[ValueStack.Depth-1].expression); }
+#line 145 ".\kompilator.y"
+                                                   { CurrentSemanticValue.expression = new AssignExpression(ValueStack[ValueStack.Depth-3].identifier,ValueStack[ValueStack.Depth-1].expression); }
 #line default
         break;
       case 49: // constantExpression -> IntNumber
-#line 149 ".\kompilator.y"
+#line 148 ".\kompilator.y"
                                 { CurrentSemanticValue.expression = new IntConstantExpression(ValueStack[ValueStack.Depth-1].str); }
 #line default
         break;
       case 50: // constantExpression -> DoubleNumber
-#line 150 ".\kompilator.y"
-                               { CurrentSemanticValue.expression = new DoubleConstantExpression(ValueStack[ValueStack.Depth-1].str); }
+#line 149 ".\kompilator.y"
+                                   { CurrentSemanticValue.expression = new DoubleConstantExpression(ValueStack[ValueStack.Depth-1].str); }
 #line default
         break;
       case 51: // constantExpression -> True
-#line 151 ".\kompilator.y"
-                       { CurrentSemanticValue.expression = new BoolConstantExpression(true); }
+#line 150 ".\kompilator.y"
+                           { CurrentSemanticValue.expression = new BoolConstantExpression(true); }
 #line default
         break;
       case 52: // constantExpression -> False
-#line 152 ".\kompilator.y"
-                        { CurrentSemanticValue.expression = new BoolConstantExpression(false); }
+#line 151 ".\kompilator.y"
+                            { CurrentSemanticValue.expression = new BoolConstantExpression(false); }
 #line default
         break;
       case 53: // ifInstruction -> If, OpenParenthesis, expression, CloseParenthesis, instruction
-#line 155 ".\kompilator.y"
-                                                                             { CurrentSemanticValue.instruction = new IfInstruction(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].instruction); }
+#line 154 ".\kompilator.y"
+                                                                                 { CurrentSemanticValue.instruction = new IfInstruction(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].instruction); }
 #line default
         break;
       case 54: // ifInstruction -> If, OpenParenthesis, expression, CloseParenthesis, instruction, 
                //                  Else, instruction
-#line 156 ".\kompilator.y"
-                                                                                              { CurrentSemanticValue.instruction = new IfInstruction(ValueStack[ValueStack.Depth-5].expression,ValueStack[ValueStack.Depth-3].instruction,ValueStack[ValueStack.Depth-1].instruction); }
+#line 155 ".\kompilator.y"
+                                                                                                  { CurrentSemanticValue.instruction = new IfInstruction(ValueStack[ValueStack.Depth-5].expression,ValueStack[ValueStack.Depth-3].instruction,ValueStack[ValueStack.Depth-1].instruction); }
 #line default
         break;
       case 55: // whileInstruction -> While, OpenParenthesis, expression, CloseParenthesis, 
                //                     instruction
-#line 159 ".\kompilator.y"
-                                                                                { CurrentSemanticValue.instruction = new WhileInstruction(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].instruction); }
+#line 158 ".\kompilator.y"
+                                                                                    { CurrentSemanticValue.instruction = new WhileInstruction(ValueStack[ValueStack.Depth-3].expression,ValueStack[ValueStack.Depth-1].instruction); }
 #line default
         break;
       case 56: // readInstruction -> Read, identifier, Semicolon
-#line 162 ".\kompilator.y"
-                                            { CurrentSemanticValue.instruction = new ReadInstruction(ValueStack[ValueStack.Depth-2].identifier); }
+#line 161 ".\kompilator.y"
+                                                { CurrentSemanticValue.instruction = new ReadInstruction(ValueStack[ValueStack.Depth-2].identifier); }
 #line default
         break;
       case 57: // readInstruction -> Read, identifier, Comma, Hex, Semicolon
-#line 163 ".\kompilator.y"
-                                                      { CurrentSemanticValue.instruction = new ReadHexInstruction(ValueStack[ValueStack.Depth-4].identifier); }
+#line 162 ".\kompilator.y"
+                                                          { CurrentSemanticValue.instruction = new ReadHexInstruction(ValueStack[ValueStack.Depth-4].identifier); }
 #line default
         break;
       case 58: // writeInstruction -> Write, expression, Semicolon
-#line 166 ".\kompilator.y"
-                                             { CurrentSemanticValue.instruction = new WriteInstruction(ValueStack[ValueStack.Depth-2].expression); }
+#line 165 ".\kompilator.y"
+                                                 { CurrentSemanticValue.instruction = new WriteInstruction(ValueStack[ValueStack.Depth-2].expression); }
 #line default
         break;
       case 59: // writeInstruction -> Write, expression, Comma, Hex, Semicolon
-#line 167 ".\kompilator.y"
-                                                       { CurrentSemanticValue.instruction = new WriteHexInstruction(ValueStack[ValueStack.Depth-4].expression); }
+#line 166 ".\kompilator.y"
+                                                           { CurrentSemanticValue.instruction = new WriteHexInstruction(ValueStack[ValueStack.Depth-4].expression); }
 #line default
         break;
       case 60: // writeInstruction -> Write, string, Semicolon
-#line 168 ".\kompilator.y"
-                                         { CurrentSemanticValue.instruction = new WriteStringInstruction(ValueStack[ValueStack.Depth-2].stringLex); }
+#line 167 ".\kompilator.y"
+                                             { CurrentSemanticValue.instruction = new WriteStringInstruction(ValueStack[ValueStack.Depth-2].stringLex); }
 #line default
         break;
       case 61: // string -> String
-#line 170 ".\kompilator.y"
-                         {CurrentSemanticValue.stringLex = new StringLex(ValueStack[ValueStack.Depth-1].str);}
+#line 169 ".\kompilator.y"
+                             {CurrentSemanticValue.stringLex = new StringLex(ValueStack[ValueStack.Depth-1].str);}
 #line default
         break;
       case 62: // returnInstruction -> Return, Semicolon
-#line 173 ".\kompilator.y"
+#line 172 ".\kompilator.y"
                                        { CurrentSemanticValue.instruction = new ReturnInstruction(); }
 #line default
         break;
