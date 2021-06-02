@@ -1,10 +1,10 @@
 
 // ==========================================================================
-//  GPPG error listing for yacc source file <.\kompilator.y - 01.06.2021 21:09:08>
+//  GPPG error listing for yacc source file <.\kompilator.y - 02.06.2021 21:52:04>
 // ==========================================================================
 //  Version:  1.5.2
 //  Machine:  DESKTOP-UEML2C3
-//  DateTime: 01.06.2021 21:10:04
+//  DateTime: 02.06.2021 21:52:06
 //  UserName: Artur
 // ==========================================================================
 
@@ -39,38 +39,42 @@
     public IType type;
     public Identifier identifier;
     public StringLex stringLex;
+    public List<string> indexes;
+    public List<ExpressionNode> expressionsIndexes;
 }
 
 %token  Program If Else While String DoubleType IntType Read Write Return BoolType True False Hex 
 %token  Assign Or And BitOr BitAnd Equality Unequality Greater GreaterOrEqual Less LessOrEqual
 %token  Plus Minus Multiplies Divides Exclamation Tilde 
 %token  OpenParenthesis CloseParenthesis OpenBracket CloseBracket Comma Semicolon
-%token  Error DoubleNumber IntNumber IntParse DoubleParse
+%token  Error DoubleNumber IntNumber HexNumber IntParse DoubleParse
 %token  Break Continue OpenSquare CloseSquare
 
-%token <str> Identifier IntNumber DoubleNumber True False String
+%token <str> Identifier IntNumber DoubleNumber HexNumber True False String
 %type <declarations> declarations
 %type <declaration> declaration 
 %type <identifiers> identifiers identifiersComma
 %type <type> type 
+%type <expression> expression  unaryExpression bitExpression multiplicativeExpression additiveExpression relationalExpression logicExpression assignExpression identifierExpression constantExpression
 %type <instructions> instructions
 %type <instruction> instruction blockInstruction expressionInstruction ifInstruction whileInstruction readInstruction writeInstruction returnInstruction breakInstruction continueInstruction
-%type <expression> expression constantExpression unaryExpression binaryExpression
 %type <identifier> identifier 
 %type <stringLex> string 
+%type <indexes> indexes indexesComma
+%type <expressionsIndexes> expressionsIndexes expressionsIndexesComma 
 
-%right Assign
-%left And Or
-%left Equality Unequality Greater GreaterOrEqual Less LessOrEqual
-%left Plus Minus
-%left Multiplies Divides
-%left BitOr BitAnd
-%right Tilde Exclamation IntParse DoubleParse Minus
 
 %nonassoc CloseParenthesis
 %nonassoc Else
 
 %%
+// Error: There are 1 non-terminating NonTerminal Symbols
+   //  {identifierExpression}
+// Warning: Terminating identifierExpression fixes the following size-1 NonTerminal set
+   // {identifierExpression}
+// Warning: NonTerminal symbol "identifierExpression" is unreachable
+// Error: NonTerminal symbol "identifierExpression" has no productions
+// ------------------------------------------------------------------------------------
 
 start               : Program blockInstruction { RootNode  = $2; }
                     ;
@@ -82,17 +86,25 @@ declarations        : declarations declaration { $$ = $1; $$.Add($2); }
                     | { $$ = new List<DeclarationNode>(); }
                     ;
 
-declaration         : type identifiers Semicolon
+declaration         : type identifiers Semicolon { $$ = new DeclarationNode($1,$2); }
                     ;
 
 identifiers         : identifiersComma Identifier { $$ = $1; $$.SimpleIdentifiers.Add($2); }
-                    | identifiersComma Identifier OpenSquare IntNumber CloseSquare { $$ = $1; $$.ArrayIdentifiers.Add(($2, $4)); }
+                    | identifiersComma Identifier OpenSquare indexes CloseSquare { $$ = $1; $$.ArrayIdentifiers.Add(($2, $4)); }
                     ;
 
 identifiersComma    : identifiersComma Identifier Comma  { $$ = $1; $$.SimpleIdentifiers.Add($2); }
-                    | identifiersComma Identifier OpenSquare IntNumber CloseSquare Comma { $$ = $1; $$.ArrayIdentifiers.Add(($2, $4)); }
+                    | identifiersComma Identifier OpenSquare indexes CloseSquare Comma { $$ = $1; $$.ArrayIdentifiers.Add(($2, $4)); }
                     | { $$ = new Identifiers(); }
                     ;
+
+indexes             : indexesComma IntNumber { $$ = $1; $$.Add($2); }
+                    ;
+
+indexesComma        : indexesComma IntNumber Comma  { $$ = $1; $$.Add($2); }
+                    | { $$ = new List<string>(); }
+                    ;
+
 
 type                : IntType { $$ = IntType.Get; }
                     | DoubleType { $$ = DoubleType.Get; }
@@ -116,47 +128,62 @@ instruction         : blockInstruction { $$ = $1; }
 
 expressionInstruction: expression Semicolon { $$ = $1; }
                     ;
+                     
+expression          : unaryExpression { $$ = $1; } 
+                    ;
 
-expression          : unaryExpression { $$ = $1; }
-                    | binaryExpression { $$ = $1; }
+unaryExpression     : Minus unaryExpression { $$ = new UnaryMinusExpression($2);  }
+                    | Tilde unaryExpression { $$ = new BitNegationExpression($2);  }
+                    | Exclamation unaryExpression { $$ = new LogicNegationExpression($2);  }
+                    | IntParse unaryExpression { $$ = new IntConversionExpression($2);  }
+                    | DoubleParse unaryExpression { $$ = new DoubleConversionExpression($2);  }
+                    | bitExpression { $$ = $1; }
+                    ;
+
+
+bitExpression       : bitExpression BitOr multiplicativeExpression { $$ = new BitsOrExpression($1,$3);  }
+                    | bitExpression BitAnd multiplicativeExpression { $$ = new BitAndExpression($1,$3);  }
+                    | multiplicativeExpression { $$ = $1; }
+                    ;
+                    
+multiplicativeExpression     : multiplicativeExpression Multiplies additiveExpression { $$ = new Multiplication($1,$3);  }
+                    | multiplicativeExpression Divides additiveExpression { $$ = new Division($1,$3);  }
+                    | additiveExpression  { $$ = $1; }
+                    ;
+
+                    
+additiveExpression  : additiveExpression Plus relationalExpression { $$ = new Sum($1,$3);  }
+                    | additiveExpression Minus relationalExpression { $$ = new Subtraction($1,$3);  }
+                    | relationalExpression  { $$ = $1; }
+                    ;
+
+relationalExpression  : relationalExpression Equality logicExpression { $$ = new EqualsExpression($1,$3);  }
+                    | relationalExpression Unequality logicExpression { $$ = new NotequalsExpression($1,$3);  }
+                    | relationalExpression Greater logicExpression { $$ = new GreaterExpression($1,$3);  }
+                    | relationalExpression GreaterOrEqual logicExpression { $$ = new GreaterOrEqualExpression($1,$3);  }
+                    | relationalExpression Less logicExpression { $$ = new LessExpression($1,$3);  }
+                    | relationalExpression LessOrEqual logicExpression { $$ = new LessOrEqualExpression($1,$3);  }
+                    | logicExpression  { $$ = $1; }
+                    ;
+
+logicExpression     : logicExpression And assignExpression { $$ = new AndExpression($1,$3);  }
+                    | logicExpression Or assignExpression { $$ = new OrExpression($1,$3);  }
+                    | assignExpression  { $$ = $1; }
+                    ;
+         
+assignExpression    : identifier Assign assignExpression { $$ = new AssignExpression($1,$3); }
                     | identifier { $$ = $1; }
-                    | constantExpression { $$ = $1; }
-                    | OpenParenthesis expression CloseParenthesis { $$ = $2; }
+                    | constantExpression {$$ = $1; }
                     ;
 
-unaryExpression     : Minus expression { $$ = new UnaryMinusExpression($2);  }
-                    | Tilde expression { $$ = new BitNegationExpression($2);  }
-                    | Exclamation expression { $$ = new LogicNegationExpression($2);  }
-                    | IntParse expression { $$ = new IntConversionExpression($2);  }
-                    | DoubleParse expression { $$ = new DoubleConversionExpression($2);  }
-                    ;
-
-binaryExpression    : expression BitOr expression { $$ = new BitsOrExpression($1,$3);  }
-                    | expression BitAnd expression { $$ = new BitAndExpression($1,$3);  }
-
-                    | expression Multiplies expression { $$ = new Multiplication($1,$3);  }
-                    | expression Divides expression { $$ = new Division($1,$3);  }
-
-                    | expression Plus expression { $$ = new Sum($1,$3);  }
-                    | expression Minus expression { $$ = new Subtraction($1,$3);  }
-
-                    | expression Equality expression { $$ = new EqualsExpression($1,$3);  }
-                    | expression Unequality expression { $$ = new NotequalsExpression($1,$3);  }
-                    | expression Greater expression { $$ = new GreaterExpression($1,$3);  }
-                    | expression GreaterOrEqual expression { $$ = new GreaterOrEqualExpression($1,$3);  }
-                    | expression Less expression { $$ = new LessExpression($1,$3);  }
-                    | expression LessOrEqual expression { $$ = new LessOrEqualExpression($1,$3);  }
-
-                    | expression And expression { $$ = new AndExpression($1,$3);  }
-                    | expression Or expression { $$ = new OrExpression($1,$3);  }
-
-                    | identifier Assign expression { $$ = new AssignExpression($1,$3); }
-                    ;
+                  
 
 constantExpression  : IntNumber { $$ = new IntConstantExpression($1); }
+                    | HexNumber { $$ = new IntConstantExpression($1, true); }
                     | DoubleNumber { $$ = new DoubleConstantExpression($1); }
                     | True { $$ = new BoolConstantExpression(true); }
                     | False { $$ = new BoolConstantExpression(false); }
+                    | OpenParenthesis expression CloseParenthesis { $$ = $2; }
                     ;
 
 ifInstruction       : If OpenParenthesis expression CloseParenthesis instruction { $$ = new IfInstruction($3,$5); }
@@ -189,9 +216,13 @@ continueInstruction : Continue Semicolon { $$ = new ContinueInstruction(); }
 
                                     
 identifier          : Identifier { $$ = new SimpleIdentifier($1);  }
-identifier          : Identifier OpenSquare expression CloseSquare  { $$ = new ArrayIdentifier($1,$3);  }
-//^^^^^^^^
-// Error: Syntax error, unexpected anchoredSymbol
-// ----------------------------------------------
-                    ;// ==========================================================================
+                    | Identifier OpenSquare expressionsIndexes CloseSquare  { $$ = new ArrayIdentifier($1,$3);  }
+                    ;
+
+expressionsIndexes      : expressionsIndexesComma expression { $$ = $1; $$.Add($2); }
+                        ;
+
+expressionsIndexesComma : expressionsIndexesComma expression Comma  { $$ = $1; $$.Add($2); }
+                        | { $$ = new List<ExpressionNode>(); }
+                        ;// ==========================================================================
 

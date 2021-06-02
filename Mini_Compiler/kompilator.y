@@ -44,21 +44,14 @@
 %type <declaration> declaration 
 %type <identifiers> identifiers identifiersComma
 %type <type> type 
+%type <expression> expression  unaryExpression bitExpression multiplicativeExpression additiveExpression relationalExpression logicExpression assignExpression constantExpression
 %type <instructions> instructions
 %type <instruction> instruction blockInstruction expressionInstruction ifInstruction whileInstruction readInstruction writeInstruction returnInstruction breakInstruction continueInstruction
-%type <expression> expression constantExpression unaryExpression binaryExpression
 %type <identifier> identifier 
 %type <stringLex> string 
 %type <indexes> indexes indexesComma
 %type <expressionsIndexes> expressionsIndexes expressionsIndexesComma 
 
-%right Assign
-%left And Or
-%left Equality Unequality Greater GreaterOrEqual Less LessOrEqual
-%left Plus Minus
-%left Multiplies Divides
-%left BitOr BitAnd
-%right Tilde Exclamation IntParse DoubleParse
 
 %nonassoc CloseParenthesis
 %nonassoc Else
@@ -117,41 +110,49 @@ instruction         : blockInstruction { $$ = $1; }
 
 expressionInstruction: expression Semicolon { $$ = $1; }
                     ;
-
-expression          : unaryExpression { $$ = $1; }
-                    | binaryExpression { $$ = $1; }
-                    | identifier { $$ = $1; }
-                    | constantExpression { $$ = $1; }
-                    | OpenParenthesis expression CloseParenthesis { $$ = $2; }
+                     
+expression          : assignExpression { $$ = $1; } 
+                    ;
+                             
+assignExpression    : identifier Assign assignExpression { $$ = new AssignExpression($1,$3); }
+                    | logicExpression { $$ = $1; }
+                    ;
+                    
+logicExpression     : logicExpression And relationalExpression { $$ = new AndExpression($1,$3);  }
+                    | logicExpression Or relationalExpression { $$ = new OrExpression($1,$3);  }
+                    | relationalExpression  { $$ = $1; }
                     ;
 
-unaryExpression     : Minus expression { $$ = new UnaryMinusExpression($2);  }
-                    | Tilde expression { $$ = new BitNegationExpression($2);  }
-                    | Exclamation expression { $$ = new LogicNegationExpression($2);  }
-                    | IntParse expression { $$ = new IntConversionExpression($2);  }
-                    | DoubleParse expression { $$ = new DoubleConversionExpression($2);  }
+relationalExpression  : relationalExpression Equality additiveExpression { $$ = new EqualsExpression($1,$3);  }
+                    | relationalExpression Unequality additiveExpression { $$ = new NotequalsExpression($1,$3);  }
+                    | relationalExpression Greater additiveExpression { $$ = new GreaterExpression($1,$3);  }
+                    | relationalExpression GreaterOrEqual additiveExpression { $$ = new GreaterOrEqualExpression($1,$3);  }
+                    | relationalExpression Less additiveExpression { $$ = new LessExpression($1,$3);  }
+                    | relationalExpression LessOrEqual additiveExpression { $$ = new LessOrEqualExpression($1,$3);  }
+                    | additiveExpression  { $$ = $1; }
+                    ;
+                                        
+additiveExpression  : additiveExpression Plus multiplicativeExpression { $$ = new Sum($1,$3);  }
+                    | additiveExpression Minus multiplicativeExpression { $$ = new Subtraction($1,$3);  }
+                    | multiplicativeExpression  { $$ = $1; }
+                    ;  
+                    
+multiplicativeExpression     : multiplicativeExpression Multiplies bitExpression { $$ = new Multiplication($1,$3);  }
+                    | multiplicativeExpression Divides bitExpression { $$ = new Division($1,$3);  }
+                    | bitExpression  { $$ = $1; }
+                    ;
+                    
+bitExpression       : bitExpression BitOr unaryExpression { $$ = new BitsOrExpression($1,$3);  }
+                    | bitExpression BitAnd unaryExpression { $$ = new BitAndExpression($1,$3);  }
+                    | unaryExpression { $$ = $1; }
                     ;
 
-binaryExpression    : expression BitOr expression { $$ = new BitsOrExpression($1,$3);  }
-                    | expression BitAnd expression { $$ = new BitAndExpression($1,$3);  }
-
-                    | expression Multiplies expression { $$ = new Multiplication($1,$3);  }
-                    | expression Divides expression { $$ = new Division($1,$3);  }
-
-                    | expression Plus expression { $$ = new Sum($1,$3);  }
-                    | expression Minus expression { $$ = new Subtraction($1,$3);  }
-
-                    | expression Equality expression { $$ = new EqualsExpression($1,$3);  }
-                    | expression Unequality expression { $$ = new NotequalsExpression($1,$3);  }
-                    | expression Greater expression { $$ = new GreaterExpression($1,$3);  }
-                    | expression GreaterOrEqual expression { $$ = new GreaterOrEqualExpression($1,$3);  }
-                    | expression Less expression { $$ = new LessExpression($1,$3);  }
-                    | expression LessOrEqual expression { $$ = new LessOrEqualExpression($1,$3);  }
-
-                    | expression And expression { $$ = new AndExpression($1,$3);  }
-                    | expression Or expression { $$ = new OrExpression($1,$3);  }
-
-                    | identifier Assign expression { $$ = new AssignExpression($1,$3); }
+unaryExpression     : Minus unaryExpression { $$ = new UnaryMinusExpression($2);  }
+                    | Tilde unaryExpression { $$ = new BitNegationExpression($2);  }
+                    | Exclamation unaryExpression { $$ = new LogicNegationExpression($2);  }
+                    | IntParse unaryExpression { $$ = new IntConversionExpression($2);  }
+                    | DoubleParse unaryExpression { $$ = new DoubleConversionExpression($2);  }
+                    | constantExpression
                     ;
 
 constantExpression  : IntNumber { $$ = new IntConstantExpression($1); }
@@ -159,6 +160,8 @@ constantExpression  : IntNumber { $$ = new IntConstantExpression($1); }
                     | DoubleNumber { $$ = new DoubleConstantExpression($1); }
                     | True { $$ = new BoolConstantExpression(true); }
                     | False { $$ = new BoolConstantExpression(false); }
+                    | identifier { $$ = $1; }
+                    | OpenParenthesis expression CloseParenthesis { $$ = $2; }
                     ;
 
 ifInstruction       : If OpenParenthesis expression CloseParenthesis instruction { $$ = new IfInstruction($3,$5); }

@@ -1,0 +1,17 @@
+program
+{
+   int i;
+
+   i = (-5)&2;
+   write i;
+   write "\n";
+   while(i != 2) {}
+
+   i = -5&2;
+   write i;
+   while(i != 2) {}
+
+   i = 2-2*3;
+   while(i != -4){}
+
+}
