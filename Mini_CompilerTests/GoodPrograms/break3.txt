@@ -1,0 +1,17 @@
+
+program
+{
+ while(true)
+ {
+
+ while(true)
+ {
+	int i;
+	i = 2;
+	break;
+ }
+ break;
+
+ }
+
+}

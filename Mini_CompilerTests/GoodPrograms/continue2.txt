@@ -1,0 +1,10 @@
+
+program
+{
+
+while(false)
+{
+continue;
+}
+
+}

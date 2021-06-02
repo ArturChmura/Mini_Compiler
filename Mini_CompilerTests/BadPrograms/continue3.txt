@@ -1,0 +1,12 @@
+
+program
+{
+
+while(continue)
+{
+int i;
+}
+
+
+
+}

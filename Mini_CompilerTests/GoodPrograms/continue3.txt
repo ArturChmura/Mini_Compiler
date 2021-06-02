@@ -1,0 +1,23 @@
+
+program
+{
+
+	int i;
+	i =0;
+
+ while(i < 5)
+ {
+
+ while(i < 3)
+ {
+	i = i+1;
+	continue;
+	i = -3123;
+ }
+ i = i+2;
+ continue;
+ i = 0;
+
+ }
+
+}

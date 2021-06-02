@@ -1,0 +1,10 @@
+
+program
+{
+while(true)
+{
+break 2;
+
+}
+
+}

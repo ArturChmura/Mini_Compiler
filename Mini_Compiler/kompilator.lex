@@ -9,7 +9,13 @@ Comment			(\/\/.*)
 String			\"(\\.|[^"\n])*\"
 
 %{
-	public int LineNumber { get; private set; } = 1;
+	public static int LineNumber { get; private set; } = 1;
+ 
+	public void Reset()
+	{
+		ErrorsCount = 0;
+		LineNumber = 1;
+	}
 
 	public int ErrorsCount { get; private set; } = 0;
 
@@ -37,6 +43,8 @@ String			\"(\\.|[^"\n])*\"
 "true" 			{ return (int)Tokens.True; }
 "false"			{ return (int)Tokens.False; }
 "hex" 			{ return (int)Tokens.Hex; }
+"break" 		{ return (int)Tokens.Break; }
+"continue" 		{ return (int)Tokens.Continue; }
 
 "="				{ return (int)Tokens.Assign; }
 "||"			{ return (int)Tokens.Or; }
@@ -59,6 +67,8 @@ String			\"(\\.|[^"\n])*\"
 ")"				{ return (int)Tokens.CloseParenthesis; }
 "{"				{ return (int)Tokens.OpenBracket; }
 "}"				{ return (int)Tokens.CloseBracket; }
+"["				{ return (int)Tokens.OpenSquare; }
+"]"				{ return (int)Tokens.CloseSquare; }
 ","				{ return (int)Tokens.Comma; }
 ";"				{ return (int)Tokens.Semicolon; }
 

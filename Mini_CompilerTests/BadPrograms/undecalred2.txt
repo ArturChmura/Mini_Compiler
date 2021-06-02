@@ -1,0 +1,9 @@
+program
+{
+  double d;
+  bool b;
+  {
+	int  i;
+	d1 = i;
+  }
+}

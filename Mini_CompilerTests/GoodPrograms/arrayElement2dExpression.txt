@@ -1,0 +1,10 @@
+program
+{
+   int i1[3,3], r, ind1, ind2;
+   ind2 =2;
+   ind1 = 1;
+   i1[2,1] = 14;
+   r = i1[ind2,ind2 - ind1];
+   while( r  != 14) {}
+   write i1[ind2,ind2 - ind1];
+}

@@ -1,4 +1,9 @@
 program
+program
 {
-  int i,i;
+  int i;
+  {
+	int i;
+	double i;
+  }
 }

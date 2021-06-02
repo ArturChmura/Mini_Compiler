@@ -7,10 +7,8 @@
     public INode RootNode { get; private set; }
 
     public Parser(Scanner scanner) : base(scanner) { 
-        this.parser = new ParserCS(scanner);
     }
 
-    private ParserCS parser;
 %}
 
 %union
@@ -21,15 +19,17 @@
     public double doubleType;
     public bool boolType;
     public List<INode> nodes;
-    public List<string> strings;
+    public Identifiers identifiers;
     public List<DeclarationNode> declarations;
     public List<InstructionNode> instructions;
     public DeclarationNode declaration;
     public InstructionNode instruction;
-    public IExpression expression;
+    public ExpressionNode expression;
     public IType type;
     public Identifier identifier;
     public StringLex stringLex;
+    public List<string> indexes;
+    public List<ExpressionNode> expressionsIndexes;
 }
 
 %token  Program If Else While String DoubleType IntType Read Write Return BoolType True False Hex 
@@ -37,17 +37,20 @@
 %token  Plus Minus Multiplies Divides Exclamation Tilde 
 %token  OpenParenthesis CloseParenthesis OpenBracket CloseBracket Comma Semicolon
 %token  Error DoubleNumber IntNumber IntParse DoubleParse
+%token  Break Continue OpenSquare CloseSquare
 
 %token <str> Identifier IntNumber DoubleNumber True False String
 %type <declarations> declarations
 %type <declaration> declaration 
-%type <strings> identifiers identifiersComma
+%type <identifiers> identifiers identifiersComma
 %type <type> type 
 %type <instructions> instructions
-%type <instruction> instruction blockInstruction expressionInstruction ifInstruction whileInstruction readInstruction writeInstruction returnInstruction
+%type <instruction> instruction blockInstruction expressionInstruction ifInstruction whileInstruction readInstruction writeInstruction returnInstruction breakInstruction continueInstruction
 %type <expression> expression constantExpression unaryExpression binaryExpression
 %type <identifier> identifier 
 %type <stringLex> string 
+%type <indexes> indexes indexesComma
+%type <expressionsIndexes> expressionsIndexes expressionsIndexesComma 
 
 %right Assign
 %left And Or
@@ -72,25 +75,29 @@ declarations        : declarations declaration { $$ = $1; $$.Add($2); }
                     | { $$ = new List<DeclarationNode>(); }
                     ;
 
-declaration         : type identifiers Semicolon 
-                    { 
-                        $$ = parser.MakeDeclaration($1,$2);
-                    }
+declaration         : type identifiers Semicolon { $$ = new DeclarationNode($1,$2); }
                     ;
+
+identifiers         : identifiersComma Identifier { $$ = $1; $$.SimpleIdentifiers.Add($2); }
+                    | identifiersComma Identifier OpenSquare indexes CloseSquare { $$ = $1; $$.ArrayIdentifiers.Add(($2, $4)); }
+                    ;
+
+identifiersComma    : identifiersComma Identifier Comma  { $$ = $1; $$.SimpleIdentifiers.Add($2); }
+                    | identifiersComma Identifier OpenSquare indexes CloseSquare Comma { $$ = $1; $$.ArrayIdentifiers.Add(($2, $4)); }
+                    | { $$ = new Identifiers(); }
+                    ;
+
+indexes             : indexesComma IntNumber { $$ = $1; $$.Add($2); }
+                    ;
+
+indexesComma        : indexesComma IntNumber Comma  { $$ = $1; $$.Add($2); }
+                    | { $$ = new List<string>(); }
+                    ;
+
 
 type                : IntType { $$ = IntType.Get; }
                     | DoubleType { $$ = DoubleType.Get; }
                     | BoolType { $$ = BoolType.Get; }
-                    ;
-
-identifiers         : identifiersComma Identifier { $$ = $1; $$.Add($2); }
-                    ;
-
-identifiersComma    : identifiersComma Identifier Comma  { $$ = $1; $$.Add($2); }
-                    | { $$ = new List<string>(); }
-                    ;
-                
-identifier          : Identifier { $$ = parser.GetIdentifier($1); }
                     ;
 
 instructions        : instructions instruction { $$ = $1; $$.Add($2); }
@@ -104,9 +111,11 @@ instruction         : blockInstruction { $$ = $1; }
                     | readInstruction { $$ = $1; }
                     | writeInstruction { $$ = $1; }
                     | returnInstruction { $$ = $1; }
+                    | breakInstruction { $$ = $1; }
+                    | continueInstruction { $$ = $1; }
                     ;
 
-expressionInstruction: expression Semicolon { $$ = new ExpressionInstructionNode($1); }
+expressionInstruction: expression Semicolon { $$ = $1; }
                     ;
 
 expression          : unaryExpression { $$ = $1; }
@@ -171,3 +180,22 @@ string              : String {$$ = new StringLex($1);}
 
 returnInstruction   : Return Semicolon { $$ = new ReturnInstruction(); }
                     ;
+
+breakInstruction    : Break IntNumber Semicolon { $$ = new BreakInstruction($2); }    
+                    | Break Semicolon { $$ = new BreakInstruction(); }  
+                    ;
+
+continueInstruction : Continue Semicolon { $$ = new ContinueInstruction(); }    
+                    ;
+
+                                    
+identifier          : Identifier { $$ = new SimpleIdentifier($1);  }
+                    | Identifier OpenSquare expressionsIndexes CloseSquare  { $$ = new ArrayIdentifier($1,$3);  }
+                    ;
+
+expressionsIndexes      : expressionsIndexesComma expression { $$ = $1; $$.Add($2); }
+                        ;
+
+expressionsIndexesComma : expressionsIndexesComma expression Comma  { $$ = $1; $$.Add($2); }
+                        | { $$ = new List<ExpressionNode>(); }
+                        ;
