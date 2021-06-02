@@ -36,10 +36,10 @@
 %token  Assign Or And BitOr BitAnd Equality Unequality Greater GreaterOrEqual Less LessOrEqual
 %token  Plus Minus Multiplies Divides Exclamation Tilde 
 %token  OpenParenthesis CloseParenthesis OpenBracket CloseBracket Comma Semicolon
-%token  Error DoubleNumber IntNumber IntParse DoubleParse
+%token  Error DoubleNumber IntNumber HexNumber IntParse DoubleParse
 %token  Break Continue OpenSquare CloseSquare
 
-%token <str> Identifier IntNumber DoubleNumber True False String
+%token <str> Identifier IntNumber DoubleNumber HexNumber True False String
 %type <declarations> declarations
 %type <declaration> declaration 
 %type <identifiers> identifiers identifiersComma
@@ -58,7 +58,7 @@
 %left Plus Minus
 %left Multiplies Divides
 %left BitOr BitAnd
-%right Tilde Exclamation IntParse DoubleParse Minus
+%right Tilde Exclamation IntParse DoubleParse
 
 %nonassoc CloseParenthesis
 %nonassoc Else
@@ -155,6 +155,7 @@ binaryExpression    : expression BitOr expression { $$ = new BitsOrExpression($1
                     ;
 
 constantExpression  : IntNumber { $$ = new IntConstantExpression($1); }
+                    | HexNumber { $$ = new IntConstantExpression($1, true); }
                     | DoubleNumber { $$ = new DoubleConstantExpression($1); }
                     | True { $$ = new BoolConstantExpression(true); }
                     | False { $$ = new BoolConstantExpression(false); }

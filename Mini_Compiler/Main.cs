@@ -245,9 +245,9 @@ namespace Mini_Compiler
 
     public interface INode
     {
+        BlockInstructionNode Parent { get; set; }
         string GenCode();
         void SecondRun();
-        BlockInstructionNode Parent { get; set; }
     }
 
     #region Instructions
@@ -257,8 +257,8 @@ namespace Mini_Compiler
         public BlockInstructionNode Parent { get; set; }
         public WhileInstruction ParentLoop { get; set; }
 
-        public abstract string GenCode();
         public abstract void SecondRun();
+        public abstract string GenCode();
     }
     public class BlockInstructionNode : InstructionNode
     {
@@ -314,24 +314,6 @@ namespace Mini_Compiler
 
             ParserCS.ReportError($"undeclared array variable \"{originalName}\"", LineNumber);
             return null;
-
-        }
-
-        public override string GenCode()
-        {
-            foreach (var ident in ArrayIdentifiers)
-            {
-                Emiter.EmitCode($"{ident.Name} = alloca {ident.Type.LLVMName}, i32 {ident.GetFillSize}");
-            }
-            foreach (var ident in SimpleIdentifiers)
-            {
-                Emiter.EmitCode($"{ident.Name} = alloca {ident.Type.LLVMName}");
-            }
-            foreach (var instruction in Instructions)
-            {
-                instruction.GenCode();
-            }
-            return null;
         }
 
         public override void SecondRun()
@@ -354,6 +336,23 @@ namespace Mini_Compiler
                 ins.SecondRun();
             }
         }
+
+        public override string GenCode()
+        {
+            foreach (var ident in ArrayIdentifiers)
+            {
+                Emiter.EmitCode($"{ident.Name} = alloca {ident.Type.LLVMName}, i32 {ident.GetFillSize}");
+            }
+            foreach (var ident in SimpleIdentifiers)
+            {
+                Emiter.EmitCode($"{ident.Name} = alloca {ident.Type.LLVMName}");
+            }
+            foreach (var instruction in Instructions)
+            {
+                instruction.GenCode();
+            }
+            return null;
+        }
     }
 
 
@@ -372,12 +371,6 @@ namespace Mini_Compiler
         {
             Type = type;
             Identifiers = identifiers;
-        }
-
-        public string GenCode()
-        {
-
-            return null;
         }
 
         public void SecondRun()
@@ -405,6 +398,11 @@ namespace Mini_Compiler
             }
 
         }
+
+        public string GenCode()
+        {
+            return null;
+        }
     }
 
     public class Identifiers
@@ -413,41 +411,6 @@ namespace Mini_Compiler
         public List<string> SimpleIdentifiers { get; set; } = new List<string>();
     }
 
-    public abstract class IdentifierDeclaration
-    {
-        public IType Type { get; set; }
-        public string Name { get; set; }
-        public string OriginalName { get; set; }
-        public abstract void Declare();
-
-    }
-
-    public class SimpleIdentifierDeclaration : IdentifierDeclaration
-    {
-        public SimpleIdentifierDeclaration(string originalName)
-        {
-            OriginalName = originalName;
-        }
-
-        public override void Declare()
-        {
-        }
-    }
-
-    public class ArrayIdentifierDeclaration : IdentifierDeclaration
-    {
-        public ArrayIdentifierDeclaration(string originalName, int size)
-        {
-            OriginalName = originalName;
-            Size = size;
-        }
-
-        public int Size { get; }
-
-        public override void Declare()
-        {
-        }
-    }
 
     public abstract class ExpressionNode : InstructionNode
     {
@@ -471,9 +434,7 @@ namespace Mini_Compiler
 
     public class SimpleIdentifier : Identifier
     {
-        public SimpleIdentifier(string originalName) : base(originalName)
-        {
-        }
+        public SimpleIdentifier(string originalName) : base(originalName) { }
         public SimpleIdentifier(string originalName, string name, IType type) : base(originalName)
         {
             Name = name;
@@ -482,13 +443,6 @@ namespace Mini_Compiler
 
         public override T Accept<T>(IIdentifierVisitor<T> visitor) => visitor.Visit(this);
 
-
-        public override string GenCode()
-        {
-            var register = ParserCS.GetUniqeRegister();
-            Emiter.EmitCode($"{register} = load {Type.LLVMName}, {Type.LLVMName}* {Name}");
-            return register;
-        }
         public override void SecondRun()
         {
             var ident = Parent.GetSimpleIdentifier(OriginalName); if (ident == null)
@@ -504,6 +458,12 @@ namespace Mini_Compiler
 
         }
 
+        public override string GenCode()
+        {
+            var register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = load {Type.LLVMName}, {Type.LLVMName}* {Name}");
+            return register;
+        }
     }
 
     public class ArrayIdentifier : Identifier, ITypeVisitor<bool>
@@ -541,34 +501,9 @@ namespace Mini_Compiler
             }
             return res;
         }
-        public override string GenCode()
-        {
-            var registerPointer = GenPointerCode();
-            var register = ParserCS.GetUniqeRegister();
-            Emiter.EmitCode($"{register} = load {Type.LLVMName}, {Type.LLVMName}* {registerPointer}");
-
-            return register;
-        }
-
-        public string GenPointerCode()
-        {
-            var registerPointer = ParserCS.GetUniqeRegister();
-            string sumReg = "0";
-            for (int i = 0; i < Expressions.Count; i++)
-            {
-                var exp = Expressions[i];
-                var expReg = exp.GenCode();
-                string multReg = ParserCS.GetUniqeRegister();
-                Emiter.EmitCode($"{multReg} = mul i32 {expReg}, {GetSizeFrom(i + 1)}");
-
-                string newSumReg = ParserCS.GetUniqeRegister();
-                Emiter.EmitCode($"{newSumReg} = add i32 {sumReg}, {multReg}");
-                sumReg = newSumReg;
-
-            }
-            Emiter.EmitCode($"{registerPointer} = getelementptr inbounds {Type.LLVMName}, {Type.LLVMName}* {Name}, i32 {sumReg}");
-            return registerPointer;
-        }
+        public bool Visit(IntType type) => true;
+        public bool Visit(DoubleType type) => false;
+        public bool Visit(BoolType type) => false;
 
         public override void SecondRun()
         {
@@ -598,13 +533,36 @@ namespace Mini_Compiler
                     ParserCS.ReportError("Array index must be int type", LineNumber);
                 }
             }
-
-
         }
 
-        public bool Visit(IntType type) => true;
-        public bool Visit(DoubleType type) => false;
-        public bool Visit(BoolType type) => false;
+        public string GenPointerCode()
+        {
+            var registerPointer = ParserCS.GetUniqeRegister();
+            string sumReg = "0";
+            for (int i = 0; i < Expressions.Count; i++)
+            {
+                var exp = Expressions[i];
+                var expReg = exp.GenCode();
+                string multReg = ParserCS.GetUniqeRegister();
+                Emiter.EmitCode($"{multReg} = mul i32 {expReg}, {GetSizeFrom(i + 1)}");
+
+                string newSumReg = ParserCS.GetUniqeRegister();
+                Emiter.EmitCode($"{newSumReg} = add i32 {sumReg}, {multReg}");
+                sumReg = newSumReg;
+
+            }
+            Emiter.EmitCode($"{registerPointer} = getelementptr inbounds {Type.LLVMName}, {Type.LLVMName}* {Name}, i32 {sumReg}");
+            return registerPointer;
+        }
+
+        public override string GenCode()
+        {
+            var registerPointer = GenPointerCode();
+            var register = ParserCS.GetUniqeRegister();
+            Emiter.EmitCode($"{register} = load {Type.LLVMName}, {Type.LLVMName}* {registerPointer}");
+
+            return register;
+        }
     }
 
 
@@ -625,9 +583,17 @@ namespace Mini_Compiler
     {
         public int Value { get; }
 
-        public IntConstantExpression(string value)
+        public IntConstantExpression(string value, bool hex = false)
         {
-            Value = int.Parse(value, CultureInfo.CreateSpecificCulture("en-US"));
+            if (hex)
+            {
+                Value = Convert.ToInt32(value, 16);
+            }
+            else
+            {
+                Value = int.Parse(value, CultureInfo.CreateSpecificCulture("en-US"));
+            }
+
             Type = IntType.Get;
         }
 
@@ -695,6 +661,11 @@ namespace Mini_Compiler
         {
             Expression = expression;
         }
+
+        public abstract bool Visit(IntType type);
+        public abstract bool Visit(DoubleType type);
+        public abstract bool Visit(BoolType type);
+
         public override void SecondRun()
         {
             Expression.Parent = this.Parent;
@@ -704,26 +675,11 @@ namespace Mini_Compiler
                 ParserCS.ReportError("Wrong type on unary expression", LineNumber);
             }
         }
-
-        public abstract bool Visit(IntType type);
-        public abstract bool Visit(DoubleType type);
-        public abstract bool Visit(BoolType type);
     }
 
     public class UnaryMinusExpression : UnaryExpression, ITypeVisitor<bool>, ITypeVisitor<string>
     {
         public UnaryMinusExpression(ExpressionNode expression) : base(expression) { }
-
-        public override void SecondRun()
-        {
-            base.SecondRun();
-            Type = Expression.Type;
-        }
-
-        public override string GenCode()
-        {
-            return Expression.Type.Accept<string>(this);
-        }
 
         public override bool Visit(IntType type) => true;
         public override bool Visit(DoubleType type) => true;
@@ -749,6 +705,17 @@ namespace Mini_Compiler
         {
             throw new NotImplementedException();
         }
+
+        public override void SecondRun()
+        {
+            base.SecondRun();
+            Type = Expression.Type;
+        }
+
+        public override string GenCode()
+        {
+            return Expression.Type.Accept<string>(this);
+        }
     }
 
     public class BitNegationExpression : UnaryExpression, ITypeVisitor<bool>
@@ -758,18 +725,17 @@ namespace Mini_Compiler
         public override bool Visit(DoubleType type) => false;
         public override bool Visit(BoolType type) => false;
 
+        public override void SecondRun()
+        {
+            base.SecondRun();
+            Type = Expression.Type;
+        }
         public override string GenCode()
         {
             var exRegisterNumber = Expression.GenCode();
             var registerNumber = ParserCS.GetUniqeRegister();
             Emiter.EmitCode($"{registerNumber} = xor {Type.LLVMName} {exRegisterNumber}, -1 ");
             return registerNumber;
-        }
-
-        public override void SecondRun()
-        {
-            base.SecondRun();
-            Type = Expression.Type;
         }
     }
 
@@ -780,17 +746,18 @@ namespace Mini_Compiler
         public override bool Visit(DoubleType type) => false;
         public override bool Visit(BoolType type) => true;
 
+        public override void SecondRun()
+        {
+            base.SecondRun();
+            Type = Expression.Type;
+        }
+
         public override string GenCode()
         {
             var exRegister = Expression.GenCode();
             var register = ParserCS.GetUniqeRegister();
             Emiter.EmitCode($"{register} = mul {Type.LLVMName} -1, {exRegister}");
             return register;
-        }
-        public override void SecondRun()
-        {
-            base.SecondRun();
-            Type = Expression.Type;
         }
     }
 
@@ -837,6 +804,10 @@ namespace Mini_Compiler
             Type = IntType.Get;
         }
 
+        public bool Visit(IntType type) => true;
+        public bool Visit(DoubleType type) => false;
+        public bool Visit(BoolType type) => false;
+
         public override void SecondRun()
         {
             LeftExpression.Parent = this.Parent;
@@ -848,10 +819,6 @@ namespace Mini_Compiler
                 ParserCS.ReportError("Wrong type on bits expression", LineNumber);
             }
         }
-        public bool Visit(IntType type) => true;
-        public bool Visit(DoubleType type) => false;
-        public bool Visit(BoolType type) => false;
-
     }
 
     public class BitsOrExpression : BitsExpression
@@ -893,6 +860,17 @@ namespace Mini_Compiler
             RightExpression = rightExpression;
 
         }
+        protected abstract string GetOperator();
+
+        protected bool isDouble = false;
+
+        public bool Visit(IntType type) => true;
+        public bool Visit(DoubleType type)
+        {
+            isDouble = true;
+            return true;
+        }
+        public bool Visit(BoolType type) => false;
 
         public override void SecondRun()
         {
@@ -908,15 +886,6 @@ namespace Mini_Compiler
             else Type = IntType.Get;
         }
 
-        protected bool isDouble = false;
-
-        public bool Visit(IntType type) => true;
-        public bool Visit(DoubleType type)
-        {
-            isDouble = true;
-            return true;
-        }
-        public bool Visit(BoolType type) => false;
 
         public override string GenCode()
         {
@@ -932,8 +901,6 @@ namespace Mini_Compiler
 
             return register;
         }
-
-        protected abstract string GetOperator();
     }
 
     public class Sum : AdditivesMultiplicativeExpressions
@@ -992,6 +959,7 @@ namespace Mini_Compiler
             RightExpression = rightExpression;
             Type = BoolType.Get;
         }
+        protected abstract string GetOperator();
 
         protected bool isDouble = false;
         protected bool isNumber = false;
@@ -1000,7 +968,18 @@ namespace Mini_Compiler
         public abstract bool Visit(IntType type);
         public abstract bool Visit(DoubleType type);
         public abstract bool Visit(BoolType type);
-        protected abstract string GetOperator();
+
+        public override void SecondRun()
+        {
+            LeftExpression.Parent = this.Parent;
+            RightExpression.Parent = this.Parent;
+            LeftExpression.SecondRun();
+            RightExpression.SecondRun();
+            if (LeftExpression.Type.Accept(this) == false || RightExpression.Type.Accept(this) == false)
+            {
+                ParserCS.ReportError("Wrong type on relation expression", LineNumber);
+            }
+        }
 
         public override string GenCode()
         {
@@ -1030,19 +1009,6 @@ namespace Mini_Compiler
             Emiter.EmitCode($"{register} = {cmp} {GetOperator()} {type} {lTyped}, {rTyped}");
 
             return register;
-        }
-
-
-        public override void SecondRun()
-        {
-            LeftExpression.Parent = this.Parent;
-            RightExpression.Parent = this.Parent;
-            LeftExpression.SecondRun();
-            RightExpression.SecondRun();
-            if (LeftExpression.Type.Accept(this) == false || RightExpression.Type.Accept(this) == false)
-            {
-                ParserCS.ReportError("Wrong type on relation expression", LineNumber);
-            }
         }
     }
     public abstract class AllTypeRelationExpression : RelationsExpression
@@ -1171,6 +1137,10 @@ namespace Mini_Compiler
             Type = BoolType.Get;
         }
 
+        public bool Visit(IntType type) => false;
+        public bool Visit(DoubleType type) => false;
+        public bool Visit(BoolType type) => true;
+
         public override void SecondRun()
         {
             LeftExpression.Parent = this.Parent;
@@ -1182,10 +1152,6 @@ namespace Mini_Compiler
                 ParserCS.ReportError("Wrong type on logic expression", LineNumber);
             }
         }
-
-        public bool Visit(IntType type) => false;
-        public bool Visit(DoubleType type) => false;
-        public bool Visit(BoolType type) => true;
     }
 
     public class AndExpression : LogicsExpression
@@ -1253,6 +1219,7 @@ namespace Mini_Compiler
         T Visit(SimpleIdentifier identifier);
         T Visit(ArrayIdentifier identifier);
     }
+
     public class AssignExpression : ExpressionNode, IIdentifierVisitor<string>
     {
         public Identifier Identifier { get; }
@@ -1264,10 +1231,6 @@ namespace Mini_Compiler
             Expression = expression;
         }
 
-        public override string GenCode()
-        {
-            return Identifier.Accept(this);
-        }
 
         public override void SecondRun()
         {
@@ -1302,6 +1265,10 @@ namespace Mini_Compiler
             Emiter.EmitCode($"{leftRegister} = load {identifier.Type.LLVMName}, {identifier.Type.LLVMName}* {identifier.Name}");
             return leftRegister;
         }
+        public override string GenCode()
+        {
+            return Identifier.Accept(this);
+        }
     }
 
     #endregion Expressions
@@ -1326,6 +1293,23 @@ namespace Mini_Compiler
         public bool Visit(IntType type) => false;
         public bool Visit(DoubleType type) => false;
         public bool Visit(BoolType type) => true;
+
+        public override void SecondRun()
+        {
+            Condition.Parent = this.Parent;
+            Instruction.Parent = this.Parent;
+            Condition.SecondRun();
+            Instruction.SecondRun();
+            if (ElseInstruction != null)
+            {
+                ElseInstruction.Parent = this.Parent;
+                ElseInstruction.SecondRun();
+            }
+            if (!Condition.Type.Accept(this))
+            {
+                ParserCS.ReportError("If condition is not a bool type", LineNumber);
+            }
+        }
 
         public override string GenCode()
         {
@@ -1355,23 +1339,6 @@ namespace Mini_Compiler
 
             return null;
         }
-
-        public override void SecondRun()
-        {
-            Condition.Parent = this.Parent;
-            Instruction.Parent = this.Parent;
-            Condition.SecondRun();
-            Instruction.SecondRun();
-            if (ElseInstruction != null)
-            {
-                ElseInstruction.Parent = this.Parent;
-                ElseInstruction.SecondRun();
-            }
-            if (!Condition.Type.Accept(this))
-            {
-                ParserCS.ReportError("If condition is not a bool type", LineNumber);
-            }
-        }
     }
 
 
@@ -1395,23 +1362,11 @@ namespace Mini_Compiler
         public bool Visit(DoubleType type) => false;
         public bool Visit(BoolType type) => true;
 
-        public override string GenCode()
-        {
 
-            Emiter.EmitCode($"br label %{LabelStart}");
-            Emiter.EmitCode(LabelStart + ":");
-            var lExpReg = Condition.GenCode();
-            Emiter.EmitCode($"br i1 {lExpReg}, label %{LabelThen}, label %{LabelEnd}");
-            Emiter.EmitCode(LabelThen + ":");
-            Instruction.GenCode();
-            Emiter.EmitCode($"br label %{LabelStart}");
-            Emiter.EmitCode(LabelEnd + ":");
-
-            return null;
-        }
         public string LabelStart;
         public string LabelThen;
         public string LabelEnd;
+
         public override void SecondRun()
         {
             LabelStart = ParserCS.GetUniqeLabel();
@@ -1425,6 +1380,20 @@ namespace Mini_Compiler
             {
                 ParserCS.ReportError("While condition is not a bool type", LineNumber);
             }
+        }
+        public override string GenCode()
+        {
+
+            Emiter.EmitCode($"br label %{LabelStart}");
+            Emiter.EmitCode(LabelStart + ":");
+            var lExpReg = Condition.GenCode();
+            Emiter.EmitCode($"br i1 {lExpReg}, label %{LabelThen}, label %{LabelEnd}");
+            Emiter.EmitCode(LabelThen + ":");
+            Instruction.GenCode();
+            Emiter.EmitCode($"br label %{LabelStart}");
+            Emiter.EmitCode(LabelEnd + ":");
+
+            return null;
         }
     }
 
@@ -1464,11 +1433,6 @@ namespace Mini_Compiler
         {
             throw new NotImplementedException();
         }
-        public override string GenCode()
-        {
-            Identifier.Type.Accept<string>(this);
-            return null;
-        }
 
         public override void SecondRun()
         {
@@ -1479,6 +1443,12 @@ namespace Mini_Compiler
                 ParserCS.ReportError("Read instruction expects int or bool identifier", LineNumber);
             }
         }
+
+        public override string GenCode()
+        {
+            Identifier.Type.Accept<string>(this);
+            return null;
+        }
     }
 
     public class ReadHexInstruction : InstructionNode, ITypeVisitor<bool>
@@ -1488,18 +1458,11 @@ namespace Mini_Compiler
         public ReadHexInstruction(Identifier identifier)
         {
             Identifier = identifier;
-
         }
 
         public bool Visit(IntType type) => true;
         public bool Visit(DoubleType type) => false;
         public bool Visit(BoolType type) => false;
-
-        public override string GenCode()
-        {
-            Emiter.EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([5 x i8]* @hex_res to i8*), i32* {Identifier.Name})");
-            return null;
-        }
 
         public override void SecondRun()
         {
@@ -1509,6 +1472,12 @@ namespace Mini_Compiler
             {
                 ParserCS.ReportError("Read HEX instruction expects int identifier", LineNumber);
             }
+        }
+
+        public override string GenCode()
+        {
+            Emiter.EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([5 x i8]* @hex_res to i8*), i32* {Identifier.Name})");
+            return null;
         }
     }
     #endregion Read
@@ -1521,13 +1490,23 @@ namespace Mini_Compiler
 
         public WriteInstruction(ExpressionNode expression)
         {
-
             Expression = expression;
         }
 
         public bool Visit(IntType type) => true;
         public bool Visit(DoubleType type) => true;
         public bool Visit(BoolType type) => true;
+
+
+        public override void SecondRun()
+        {
+            Expression.Parent = this.Parent;
+            Expression.SecondRun();
+            if (!Expression.Type.Accept<bool>(this))
+            {
+                ParserCS.ReportError("Write instruction expects int, double or bool identifier", LineNumber);
+            }
+        }
 
         string ITypeVisitor<string>.Visit(IntType type)
         {
@@ -1568,16 +1547,6 @@ namespace Mini_Compiler
             Expression.Type.Accept<string>(this);
             return null;
         }
-
-        public override void SecondRun()
-        {
-            Expression.Parent = this.Parent;
-            Expression.SecondRun();
-            if (!Expression.Type.Accept<bool>(this))
-            {
-                ParserCS.ReportError("Write instruction expects int, double or bool identifier", LineNumber);
-            }
-        }
     }
 
     public class WriteHexInstruction : InstructionNode, ITypeVisitor<bool>
@@ -1594,14 +1563,6 @@ namespace Mini_Compiler
         public bool Visit(DoubleType type) => false;
         public bool Visit(BoolType type) => false;
 
-        public override string GenCode()
-        {
-            var reg = Expression.GenCode();
-            Emiter.EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([5 x i8]* @hex_res to i8*), i32 {reg})");
-
-            return null;
-        }
-
         public override void SecondRun()
         {
             Expression.Parent = this.Parent;
@@ -1610,6 +1571,14 @@ namespace Mini_Compiler
             {
                 ParserCS.ReportError("Write HEX instruction expects int identifier", LineNumber);
             }
+        }
+
+        public override string GenCode()
+        {
+            var reg = Expression.GenCode();
+            Emiter.EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([5 x i8]* @hex_res to i8*), i32 {reg})");
+
+            return null;
         }
     }
 
@@ -1650,17 +1619,16 @@ namespace Mini_Compiler
         {
             String = s;
         }
+        public override void SecondRun()
+        {
+            return;
+        }
 
         public override string GenCode()
         {
             Emiter.EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([{String.LexLength} x i8]* @{String.ConstName} to i8*))");
 
             return null;
-        }
-
-        public override void SecondRun()
-        {
-            return;
         }
     }
     #endregion Write
@@ -1669,15 +1637,15 @@ namespace Mini_Compiler
     #region Return
     public class ReturnInstruction : InstructionNode
     {
+        public override void SecondRun()
+        {
+            return;
+        }
+
         public override string GenCode()
         {
             Emiter.EmitCode("ret i32 0");
             return null;
-        }
-
-        public override void SecondRun()
-        {
-            return;
         }
     }
 
@@ -1686,24 +1654,18 @@ namespace Mini_Compiler
     #region Break
     public class BreakInstruction : InstructionNode
     {
-        public int Deep { get; }
+        public int Depth { get; }
 
-        public BreakInstruction(string deep = "1")
+        public BreakInstruction(string depth = "1")
         {
 
-            Deep = int.Parse(deep);
-            if (Deep <= 0)
+            Depth = int.Parse(depth);
+            if (Depth <= 0)
             {
                 ParserCS.ReportError($"Break number must be positive", LineNumber);
             }
         }
 
-
-        public override string GenCode()
-        {
-            Emiter.EmitCode($"br label %{Label}");
-            return null;
-        }
         public string Label;
 
         public override void SecondRun()
@@ -1711,20 +1673,26 @@ namespace Mini_Compiler
             WhileInstruction p = this.ParentLoop == null ? this.Parent.ParentLoop : this.ParentLoop;
             if (p == null)
             {
-                ParserCS.ReportError($"Break in not inside {Deep} loops", LineNumber);
+                ParserCS.ReportError($"Break in not inside {Depth} loops", LineNumber);
                 return;
             }
-            for (int i = 0; i < Deep - 1; i++)
+            for (int i = 0; i < Depth - 1; i++)
             {
                 p = p.ParentLoop == null ? p.Parent.ParentLoop : p.ParentLoop;
                 if (p == null)
                 {
-                    ParserCS.ReportError($"Break in not inside {Deep} loops", LineNumber);
+                    ParserCS.ReportError($"Break in not inside {Depth} loops", LineNumber);
                     return;
                 }
             }
             Label = p.LabelEnd;
 
+        }
+
+        public override string GenCode()
+        {
+            Emiter.EmitCode($"br label %{Label}");
+            return null;
         }
     }
 
@@ -1732,16 +1700,8 @@ namespace Mini_Compiler
     {
         public int Deep { get; }
 
-        public ContinueInstruction()
-        {
-        }
+        public ContinueInstruction() { }
 
-
-        public override string GenCode()
-        {
-            Emiter.EmitCode($"br label %{Label}");
-            return null;
-        }
         public string Label;
 
         public override void SecondRun()
@@ -1754,6 +1714,12 @@ namespace Mini_Compiler
             }
             Label = p.LabelStart;
 
+        }
+
+        public override string GenCode()
+        {
+            Emiter.EmitCode($"br label %{Label}");
+            return null;
         }
     }
 
@@ -1797,15 +1763,15 @@ namespace Mini_Compiler
     {
         public static int Main(string[] args)
         {
-            string fileName;
+
             if (args.Length == 0)
             {
-                fileName = Console.ReadLine();
+                Console.WriteLine("Usage: 1 argument - path to source file");
+                return 1;
             }
-            else
-            {
-                fileName = args[0];
-            }
+
+            string fileName = args[0];
+
             StreamReader streamReader;
             try
             {
@@ -1813,15 +1779,18 @@ namespace Mini_Compiler
             }
             catch (Exception)
             {
+                Console.WriteLine("Wrong file path");
                 return 1;
             }
 
             var scanner = new Scanner(streamReader.BaseStream);
+
             scanner.Reset();
             ParserCS.Reset();
-            var parser = new Parser(scanner);
 
+            var parser = new Parser(scanner);
             parser.Parse();
+
             if (parser.RootNode != null)
             {
                 parser.RootNode.SecondRun();
@@ -1829,7 +1798,6 @@ namespace Mini_Compiler
 
             if (parser.ErrorsCount > 0 || scanner.ErrorsCount > 0)
             {
-
                 Console.WriteLine("Not compiled.");
                 return 1;
             }
@@ -1841,12 +1809,16 @@ namespace Mini_Compiler
                 }
                 catch (Exception)
                 {
+                    Console.WriteLine("Could not create output file");
                     return 1;
                 }
+
                 Emiter.EmitProlog();
                 parser.RootNode.GenCode();
                 Emiter.EmitEpilog();
+
                 Emiter.SW.Close();
+
                 Console.WriteLine("Compiled.");
                 return 0;
             }

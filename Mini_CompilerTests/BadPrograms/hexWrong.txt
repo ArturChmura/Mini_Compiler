@@ -1,0 +1,6 @@
+program
+{
+   int i1;
+
+   i1 = 0x7BH;
+}

@@ -1,0 +1,15 @@
+program
+{
+   int i1,i2,i3;
+   double d1, d2, d3;
+   d1 = (0xA/2);
+   write d1;
+   d2 = 3-d1;
+   write d2;
+   i1 = (int)d2;
+   write i1;
+   i2 = (int)(3-0xA/2);
+   write i2;
+   while(i1 != -2) {}
+   while(i1 != i2) {}
+}

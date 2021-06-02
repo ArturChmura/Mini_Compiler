@@ -1,0 +1,9 @@
+program
+{
+   int i1,i2,i3;
+   double d1,d2,d3;
+
+   i1 = 0x7B;
+   i2 = 0X7B;
+   while(i1 != i2) {}
+}

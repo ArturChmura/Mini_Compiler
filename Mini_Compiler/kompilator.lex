@@ -5,6 +5,7 @@ IntNum			([1-9][0-9]*|0)
 Identifier      ([a-zA-Z][a-zA-Z0-9]*)
 IntNumber       (0|[1-9][0-9]*)
 DoubleNumber    (0|[1-9][0-9]*)\.[0-9]+
+HexNumber		0[x|X]([0-9|a-f|A-F])*
 Comment			(\/\/.*)
 String			\"(\\.|[^"\n])*\"
 
@@ -79,7 +80,8 @@ String			\"(\\.|[^"\n])*\"
 
 {Identifier}	{ yylval.str=yytext; return (int)Tokens.Identifier; }
 {IntNumber}		{ yylval.str=yytext; return (int)Tokens.IntNumber; }     
-{DoubleNumber}	{ yylval.str=yytext; return (int)Tokens.DoubleNumber; }     
+{DoubleNumber}	{ yylval.str=yytext; return (int)Tokens.DoubleNumber; }    
+{HexNumber}		{ yylval.str=yytext; return (int)Tokens.HexNumber; }   
 {String}		{ yylval.str=yytext; return (int)Tokens.String; }         
 {Comment}		{ }    
 <<EOF>>			{ return (int)Tokens.EOF; } 
