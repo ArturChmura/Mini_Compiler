@@ -1,13 +1,11 @@
 # About Mini_Compiler
-Is a compiler for madeup language inspied by C.
-Programs are compiled to LLVM code that can be run by LLI.
-
+Is a compiler for made-up language inspired by C. Programs are compiled to LLVM code that can be run by LLI.
 # Mini Language details
-* Avalible types are: int, double, bool as well as array type of all 3
-* Key words: program if else while read write return int double bool true false hex
+* Available types are: int, double, bool as well as array type of all 3
+* Keywords: program if else while read write return int double bool true false hex
 * Operators: = || && | & == != > >= < <= + - * / ! ~ ( ) { } , ;
-* program must begin with key word "program" followed by  { } 
-* example program: 
+* program must begin with keyword "program" followed by { }
+* example program:
 ```
 program
 {
