@@ -7,7 +7,7 @@ IntNumber       (0|[1-9][0-9]*)
 DoubleNumber    (0|[1-9][0-9]*)\.[0-9]+
 HexNumber		0[x|X]([0-9|a-f|A-F])*
 Comment			(\/\/.*)
-String			\"(\\.|[^"\n])*\"
+String			\"(\\.|[^"\n\\])*\"
 
 %{
 	public static int LineNumber { get; private set; } = 1;
@@ -38,8 +38,6 @@ String			\"(\\.|[^"\n])*\"
 "return"		{ return (int)Tokens.Return; }
 "int" 			{ return (int)Tokens.IntType; }
 "double"		{ return (int)Tokens.DoubleType; }
-"(int)" 		{ return (int)Tokens.IntParse; }
-"(double)"		{ return (int)Tokens.DoubleParse; }
 "bool" 			{ return (int)Tokens.BoolType; }
 "true" 			{ return (int)Tokens.True; }
 "false"			{ return (int)Tokens.False; }
@@ -85,4 +83,4 @@ String			\"(\\.|[^"\n])*\"
 {String}		{ yylval.str=yytext; return (int)Tokens.String; }         
 {Comment}		{ }    
 <<EOF>>			{ return (int)Tokens.EOF; } 
-.				{ yyerror("Unexpected token: " + yytext); return (int)Tokens.Error; }
+.				{ yyerror("Unexpected token: " + yytext); return (int)Tokens.error; }

@@ -1,0 +1,6 @@
+program
+{
+  double d **;
+  bool b;
+  d = 2.0 ++ 2.0;
+}

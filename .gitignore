@@ -132,3 +132,4 @@ $RECYCLE.BIN/
 .DS_Store
 
 _NCrunch*
+llvm-9.0.1-win64-bin/

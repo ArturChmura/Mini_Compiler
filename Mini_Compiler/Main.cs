@@ -8,15 +8,10 @@ namespace Mini_Compiler
 {
     public class ParserCS
     {
-        public static void Reset()
-        {
-            registerNumber = 0;
-            labelNumber = 0;
-            variableNumber = 0;
-            ErrorsCount = 0;
-            strings = new List<StringLex>();
-        }
         public static int ErrorsCount { get; private set; }
+
+        public static List<StringLex> strings = new List<StringLex>();
+
         public static void ReportError(string message, int lineNumber)
         {
             ErrorsCount++;
@@ -41,7 +36,14 @@ namespace Mini_Compiler
             return "label" + (++labelNumber).ToString();
         }
 
-        public static List<StringLex> strings = new List<StringLex>();
+        public static void Reset()
+        {
+            registerNumber = 0;
+            labelNumber = 0;
+            variableNumber = 0;
+            ErrorsCount = 0;
+            strings = new List<StringLex>();
+        }
     }
 
 
@@ -126,7 +128,7 @@ namespace Mini_Compiler
 
         public string Visit(BoolType type)
         {
-            throw new ApplicationException("There is no such conversion");
+            throw new ApplicationException("There is no such conversion"); // this line should never be executed
         }
     }
 
@@ -153,7 +155,7 @@ namespace Mini_Compiler
 
         public string Visit(BoolType type)
         {
-            throw new ApplicationException("There is no such conversion");
+            throw new ApplicationException("There is no such conversion"); // this line should never be executed
         }
     }
 
@@ -175,7 +177,7 @@ namespace Mini_Compiler
 
         public string Visit(DoubleType type)
         {
-            throw new ApplicationException("There is no such conversion");
+            throw new ApplicationException("There is no such conversion"); // this line should never be executed
         }
 
         public string Visit(BoolType type)
@@ -243,27 +245,26 @@ namespace Mini_Compiler
 
     #endregion Converters
 
-    public interface INode
-    {
-        BlockInstructionNode Parent { get; set; }
-        string GenCode();
-        void SecondRun();
-    }
-
-    #region Instructions
-    public abstract class InstructionNode : INode
+    public abstract class Node
     {
         public int LineNumber = Scanner.LineNumber;
         public BlockInstructionNode Parent { get; set; }
-        public WhileInstruction ParentLoop { get; set; }
-
+        public abstract  string GenCode();
         public abstract void SecondRun();
-        public abstract string GenCode();
     }
+
+    #region Instructions
+    public abstract class InstructionNode : Node
+    {
+        public WhileInstruction ParentLoop { get; set; }
+    }
+
     public class BlockInstructionNode : InstructionNode
     {
         public List<DeclarationNode> Declarations { get; }
         public List<InstructionNode> Instructions { get; }
+        public List<SimpleIdentifier> SimpleIdentifiers { get; set; } = new List<SimpleIdentifier>();
+        public List<ArrayIdentifier> ArrayIdentifiers { get; set; } = new List<ArrayIdentifier>();
         public IEnumerable<Identifier> Identifiers
         {
             get
@@ -272,9 +273,6 @@ namespace Mini_Compiler
                 return ret.Concat(ArrayIdentifiers);
             }
         }
-
-        public List<SimpleIdentifier> SimpleIdentifiers { get; set; } = new List<SimpleIdentifier>();
-        public List<ArrayIdentifier> ArrayIdentifiers { get; set; } = new List<ArrayIdentifier>();
 
         public BlockInstructionNode(List<DeclarationNode> declarations, List<InstructionNode> instructions)
         {
@@ -360,12 +358,10 @@ namespace Mini_Compiler
 
 
     #region Declarations
-    public class DeclarationNode : INode
+    public class DeclarationNode : Node
     {
-        public int LineNumber = Scanner.LineNumber;
         public IType Type { get; }
         public Identifiers Identifiers { get; }
-        public BlockInstructionNode Parent { get; set; }
 
         public DeclarationNode(IType type, Identifiers identifiers)
         {
@@ -373,7 +369,7 @@ namespace Mini_Compiler
             Identifiers = identifiers;
         }
 
-        public void SecondRun()
+        public override void SecondRun()
         {
             foreach (var ident in Identifiers.ArrayIdentifiers)
             {
@@ -385,6 +381,7 @@ namespace Mini_Compiler
                 var identifier = new ArrayIdentifier(ident.name, name, Type, ident.size.Select(s => int.Parse(s)).ToList());
                 Parent.ArrayIdentifiers.Add(identifier);
             }
+
             foreach (var ident in Identifiers.SimpleIdentifiers)
             {
                 if (Parent.Identifiers.Any(id => id.OriginalName == ident))
@@ -396,10 +393,9 @@ namespace Mini_Compiler
 
                 Parent.SimpleIdentifiers.Add(identifier);
             }
-
         }
 
-        public string GenCode()
+        public override string GenCode()
         {
             return null;
         }
@@ -426,11 +422,13 @@ namespace Mini_Compiler
         public string Name { get; set; }
         public string OriginalName { get; }
         public abstract T Accept<T>(IIdentifierVisitor<T> visitor);
+        public abstract string GenPointerCode();
         public Identifier(string originalName)
         {
             OriginalName = originalName;
         }
     }
+
 
     public class SimpleIdentifier : Identifier
     {
@@ -463,6 +461,11 @@ namespace Mini_Compiler
             var register = ParserCS.GetUniqeRegister();
             Emiter.EmitCode($"{register} = load {Type.LLVMName}, {Type.LLVMName}* {Name}");
             return register;
+        }
+
+        public override string GenPointerCode()
+        {
+            return Name;
         }
     }
 
@@ -535,7 +538,7 @@ namespace Mini_Compiler
             }
         }
 
-        public string GenPointerCode()
+        public override string GenPointerCode()
         {
             var registerPointer = ParserCS.GetUniqeRegister();
             string sumReg = "0";
@@ -563,6 +566,8 @@ namespace Mini_Compiler
 
             return register;
         }
+
+    
     }
 
 
@@ -756,7 +761,7 @@ namespace Mini_Compiler
         {
             var exRegister = Expression.GenCode();
             var register = ParserCS.GetUniqeRegister();
-            Emiter.EmitCode($"{register} = mul {Type.LLVMName} -1, {exRegister}");
+            Emiter.EmitCode($"{register} = xor {Type.LLVMName} 1, {exRegister}");
             return register;
         }
     }
@@ -1355,7 +1360,6 @@ namespace Mini_Compiler
         {
             Condition = condition;
             Instruction = instruction;
-            Instruction.ParentLoop = this;
         }
 
         public bool Visit(IntType type) => false;
@@ -1369,6 +1373,7 @@ namespace Mini_Compiler
 
         public override void SecondRun()
         {
+            Instruction.ParentLoop = this;
             LabelStart = ParserCS.GetUniqeLabel();
             LabelThen = ParserCS.GetUniqeLabel();
             LabelEnd = ParserCS.GetUniqeLabel();
@@ -1419,13 +1424,13 @@ namespace Mini_Compiler
 
         string ITypeVisitor<string>.Visit(IntType type)
         {
-            Emiter.EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([3 x i8]* @int_res to i8*), i32* {Identifier.Name})");
+            Emiter.EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([3 x i8]* @int_res to i8*), i32* {Identifier.GenPointerCode()})");
             return null;
         }
 
         string ITypeVisitor<string>.Visit(DoubleType type)
         {
-            Emiter.EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([4 x i8]* @double_res to i8*), double* {Identifier.Name})");
+            Emiter.EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([4 x i8]* @double_res to i8*), double* {Identifier.GenPointerCode()})");
             return null;
         }
 
@@ -1476,7 +1481,7 @@ namespace Mini_Compiler
 
         public override string GenCode()
         {
-            Emiter.EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([5 x i8]* @hex_res to i8*), i32* {Identifier.Name})");
+            Emiter.EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([3 x i8]* @hex_scanf to i8*), i32* {Identifier.GenPointerCode()})");
             return null;
         }
     }
@@ -1576,7 +1581,7 @@ namespace Mini_Compiler
         public override string GenCode()
         {
             var reg = Expression.GenCode();
-            Emiter.EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([5 x i8]* @hex_res to i8*), i32 {reg})");
+            Emiter.EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([5 x i8]* @hex_write to i8*), i32 {reg})");
 
             return null;
         }
@@ -1598,11 +1603,11 @@ namespace Mini_Compiler
         public StringLex(string s)
         {
             s = s.Substring(1, s.Length - 2);
-            s = s.Replace("\\", "\\\\");
-            s = s.Replace("\\\\\\\\", "\\5C");
-            s = s.Replace("\\\\n", "\n");
-            s = s.Replace("\\\\\"", "\\22");
-            s = s.Replace("\\\\", "");
+            s = s.Replace(@"\", @"\\");
+            s = s.Replace(@"\\\\", @"\5C");
+            s = s.Replace(@"\\n", "\n");
+            s = s.Replace("\\\\\"", @"\22");
+            s = s.Replace(@"\\", "");
             InnerString = s;
             ConstName = "str" + (++count).ToString();
             ParserCS.strings.Add(this);
@@ -1670,7 +1675,7 @@ namespace Mini_Compiler
 
         public override void SecondRun()
         {
-            WhileInstruction p = this.ParentLoop == null ? this.Parent.ParentLoop : this.ParentLoop;
+            WhileInstruction p = this.ParentLoop ?? this.Parent.ParentLoop;
             if (p == null)
             {
                 ParserCS.ReportError($"Break in not inside {Depth} loops", LineNumber);
@@ -1678,7 +1683,7 @@ namespace Mini_Compiler
             }
             for (int i = 0; i < Depth - 1; i++)
             {
-                p = p.ParentLoop == null ? p.Parent.ParentLoop : p.ParentLoop;
+                p = p.ParentLoop ?? p.Parent.ParentLoop;
                 if (p == null)
                 {
                     ParserCS.ReportError($"Break in not inside {Depth} loops", LineNumber);
@@ -1706,7 +1711,7 @@ namespace Mini_Compiler
 
         public override void SecondRun()
         {
-            WhileInstruction p = this.ParentLoop == null ? this.Parent.ParentLoop : this.ParentLoop;
+            WhileInstruction p = this.ParentLoop ?? this.Parent.ParentLoop;
             if (p == null)
             {
                 ParserCS.ReportError($"Continue is not inside loop", LineNumber);
@@ -1734,7 +1739,8 @@ namespace Mini_Compiler
             EmitCode("; prolog");
             EmitCode("@int_res = constant [3 x i8] c\"%d\\00\"");
             EmitCode("@double_res = constant [4 x i8] c\"%lf\\00\"");
-            EmitCode("@hex_res = constant [5 x i8] c\"0X%X\\00\"");
+            EmitCode("@hex_scanf = constant [3 x i8] c\"%X\\00\"");
+            EmitCode("@hex_write = constant [5 x i8] c\"0X%X\\00\"");
             EmitCode("@true_res = constant [5 x i8] c\"True\\00\"");
             EmitCode("@false_res = constant [6 x i8] c\"False\\00\"");
             foreach (var s in ParserCS.strings)
@@ -1791,7 +1797,7 @@ namespace Mini_Compiler
             var parser = new Parser(scanner);
             parser.Parse();
 
-            if (parser.RootNode != null)
+            if (parser.ErrorsCount == 0 && scanner.ErrorsCount == 0)
             {
                 parser.RootNode.SecondRun();
             }

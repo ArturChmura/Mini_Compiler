@@ -4,21 +4,20 @@
 %{
     public int ErrorsCount { get => ParserCS.ErrorsCount; }
 
-    public INode RootNode { get; private set; }
+    public Node RootNode { get; private set; }
 
     public Parser(Scanner scanner) : base(scanner) { 
     }
-
 %}
 
 %union
 {
-    public INode node;
+    public Node node;
     public string str;
     public int intType;
     public double doubleType;
     public bool boolType;
-    public List<INode> nodes;
+    public List<Node> nodes;
     public Identifiers identifiers;
     public List<DeclarationNode> declarations;
     public List<InstructionNode> instructions;
@@ -36,7 +35,7 @@
 %token  Assign Or And BitOr BitAnd Equality Unequality Greater GreaterOrEqual Less LessOrEqual
 %token  Plus Minus Multiplies Divides Exclamation Tilde 
 %token  OpenParenthesis CloseParenthesis OpenBracket CloseBracket Comma Semicolon
-%token  Error DoubleNumber IntNumber HexNumber IntParse DoubleParse
+%token  DoubleNumber IntNumber HexNumber
 %token  Break Continue OpenSquare CloseSquare
 
 %token <str> Identifier IntNumber DoubleNumber HexNumber True False String
@@ -52,7 +51,6 @@
 %type <indexes> indexes indexesComma
 %type <expressionsIndexes> expressionsIndexes expressionsIndexesComma 
 
-
 %nonassoc CloseParenthesis
 %nonassoc Else
 
@@ -61,7 +59,7 @@
 start               : Program blockInstruction { RootNode  = $2; }
                     ;
 
-blockInstruction    :OpenBracket declarations instructions CloseBracket   { $$  = new BlockInstructionNode($2, $3); }
+blockInstruction    : OpenBracket declarations instructions CloseBracket   { $$  = new BlockInstructionNode($2, $3); }
                     ;
 
 declarations        : declarations declaration { $$ = $1; $$.Add($2); }
@@ -106,6 +104,13 @@ instruction         : blockInstruction { $$ = $1; }
                     | returnInstruction { $$ = $1; }
                     | breakInstruction { $$ = $1; }
                     | continueInstruction { $$ = $1; }
+                    | errorLine  { yyerrok(); }
+                    ;
+
+errorLine           : error Semicolon
+                    | error CloseSquare 
+                    | error CloseParenthesis 
+                    | error CloseBracket 
                     ;
 
 expressionInstruction: expression Semicolon { $$ = $1; }
@@ -150,8 +155,8 @@ bitExpression       : bitExpression BitOr unaryExpression { $$ = new BitsOrExpre
 unaryExpression     : Minus unaryExpression { $$ = new UnaryMinusExpression($2);  }
                     | Tilde unaryExpression { $$ = new BitNegationExpression($2);  }
                     | Exclamation unaryExpression { $$ = new LogicNegationExpression($2);  }
-                    | IntParse unaryExpression { $$ = new IntConversionExpression($2);  }
-                    | DoubleParse unaryExpression { $$ = new DoubleConversionExpression($2);  }
+                    | OpenParenthesis IntType CloseParenthesis unaryExpression { $$ = new IntConversionExpression($4);  }
+                    | OpenParenthesis DoubleType CloseParenthesis unaryExpression { $$ = new DoubleConversionExpression($4);  }
                     | constantExpression
                     ;
 
@@ -197,8 +202,8 @@ identifier          : Identifier { $$ = new SimpleIdentifier($1);  }
                     | Identifier OpenSquare expressionsIndexes CloseSquare  { $$ = new ArrayIdentifier($1,$3);  }
                     ;
 
-expressionsIndexes      : expressionsIndexesComma expression { $$ = $1; $$.Add($2); }
-                        ;
+expressionsIndexes  : expressionsIndexesComma expression { $$ = $1; $$.Add($2); }
+                    ;
 
 expressionsIndexesComma : expressionsIndexesComma expression Comma  { $$ = $1; $$.Add($2); }
                         | { $$ = new List<ExpressionNode>(); }
